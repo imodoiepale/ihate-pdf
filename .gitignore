@@ -22,6 +22,10 @@ llm-keys.bin
 .DS_Store
 Thumbs.db
 
+# python
+__pycache__/
+*.py[cod]
+
 # editor / agent scratch
 .vscode/
 .idea/
