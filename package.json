@@ -1,9 +1,9 @@
 {
-  "name": "lovepdf-desktop",
+  "name": "lovepdf-studio",
   "version": "1.0.0",
-  "description": "Desktop PDF toolbox inspired by iLovePDF. Local, unlimited, streaming, no cloud caps.",
+  "description": "LovePDF Studio — local-first desktop PDF toolbox. Merge, split, compress, convert, and batch huge files on disk. Bring your own LLM keys.",
   "main": "./out/main/index.js",
-  "author": "LovePDF",
+  "author": "James Epale <ijepale@gmail.com>",
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev -- --no-sandbox --disable-gpu",
@@ -12,7 +12,9 @@
     "preview": "electron-vite preview",
     "start": "electron-vite dev -- --no-sandbox --disable-gpu",
     "smoke": "node scripts/smoke-pdf.mjs",
-    "test:engine": "node scripts/smoke-pdf.mjs"
+    "test:engine": "node scripts/smoke-pdf.mjs",
+    "test:extract": "node scripts/test-extract.mjs",
+    "mcp": "node mcp/lovepdf-mcp.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

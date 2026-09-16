@@ -5,11 +5,17 @@ import type { FileRef, JobProgress, JobResult, OptionField } from '@shared/types
 import { apiGet, apiPost, importBrowserFile, subscribeJob } from '../lib/api'
 import { formatBytes, formatPages } from '../lib/format'
 import { ToolIcon } from '../components/ToolIcon'
+import { Callout, EmptyDrop, LoadingBar } from '../components/Callout'
 
-type Status = { outputDir: string; formatFree: string; binaries: Record<string, string | null> }
+type Status = {
+  outputDir: string
+  formatFree: string
+  binaries: Record<string, string | null>
+  extract?: Record<string, boolean | string>
+  llm?: { defaultProvider: string | null; configured: string[]; encryption: string }
+}
 
 const defaults: Record<string, string> = {
-  mode: 'range',
   level: 'recommended',
   format: 'docx',
   position: 'center',
@@ -22,7 +28,8 @@ const defaults: Record<string, string> = {
   rotation: 'diagonal',
   opacity: '25',
   start: '1',
-  marginMm: '12'
+  marginMm: '12',
+  target: 'en'
 }
 
 export function ToolWorkspace() {
@@ -138,6 +145,12 @@ export function ToolWorkspace() {
     }
     if (tool.id === 'pdf-to-jpg') return need('pdftoppm', 'Poppler is not installed. Linux: sudo apt install poppler-utils')
     if (tool.id === 'pdf-to-pdfa') return need('gs', 'Ghostscript is not installed. Linux: sudo apt install ghostscript')
+    if (['parse-pdf', 'extract-bank', 'extract-invoice', 'ask-pdf', 'summarize-pdf', 'translate-pdf'].includes(tool.id)) {
+      return need('pdftotext', 'pdftotext is not installed. Analyze/extract needs poppler-utils. Linux: sudo apt install poppler-utils')
+    }
+    if (tool.id === 'extract-images') {
+      return need('pdfimages', 'pdfimages is not installed. Linux: sudo apt install poppler-utils')
+    }
     return need('qpdf', 'qpdf is not installed. Linux: sudo apt install qpdf')
   }, [tool, status])
 
@@ -191,8 +204,9 @@ export function ToolWorkspace() {
   if (!tool) {
     return (
       <div className="px-5 py-24 text-center">
-        <h1 className="text-2xl font-bold">Tool not found</h1>
-        <Link to="/" className="mt-4 inline-block text-ilp-red">
+        <h1 className="text-2xl font-extrabold tracking-tight">Tool not found</h1>
+        <p className="mt-2 text-sm text-ilp-muted">That tool isn’t in this studio build.</p>
+        <Link to="/" className="mt-4 inline-block text-sm font-semibold text-ilp-red">
           Back to all tools
         </Link>
       </div>
@@ -200,36 +214,43 @@ export function ToolWorkspace() {
   }
 
   return (
-    <div className="tool-sand min-h-[calc(100vh-70px)] pb-40">
-      <div className="mx-auto max-w-[860px] px-5 pt-10 text-center">
-        <h1 className="text-[34px] font-bold text-ilp-dark">{tool.title}</h1>
-        <p className="mx-auto mt-3 max-w-[620px] text-[16px] text-[#5c5c66]">{tool.tagline}</p>
+    <div className="tool-sand min-h-[calc(100vh-58px)] pb-40">
+      <div className="mx-auto max-w-[860px] px-5 pt-8 text-center sm:pt-10">
+        <div className="mb-4 flex justify-center">
+          <ToolIcon id={tool.id} color={tool.color} size={44} />
+        </div>
+        <h1 className="text-[28px] font-extrabold tracking-tight text-ilp-dark sm:text-[34px]">{tool.title}</h1>
+        <p className="mx-auto mt-2 max-w-[620px] text-[15px] text-[#5c5c66] sm:text-[16px]">{tool.tagline}</p>
       </div>
 
       {engineDown && (
-        <div className="mx-auto mt-6 max-w-[760px] rounded-lg border border-red-200 bg-white px-4 py-3 text-sm text-red-700">
-          The desktop engine is not running. Start LovePDF with <code>npm run dev</code> so file picking and PDF jobs
-          can use your disk.
+        <div className="mx-auto mt-6 max-w-[760px] px-5">
+          <Callout tone="danger" title="Engine offline">
+            The desktop engine is not running. Start LovePDF Studio with <code className="font-mono">npm run dev</code>{' '}
+            so file picking and PDF jobs can use your disk.
+          </Callout>
         </div>
       )}
 
       {missingHint && (
-        <div className="mx-auto mt-4 max-w-[760px] rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          {missingHint}
+        <div className="mx-auto mt-4 max-w-[760px] px-5">
+          <Callout tone="warn">{missingHint}</Callout>
         </div>
       )}
 
       {files.some((f) => f.size >= 1024 * 1024 * 1024) && (
-        <div className="mx-auto mt-4 max-w-[760px] rounded-lg border border-sky-200 bg-white px-4 py-3 text-sm text-sky-950">
-          At least one file is 1 GB or larger. LovePDF will stream it on disk with qpdf and related CLI tools — it will
-          not load the document into the page heap. Make sure the destination drive has enough free space. There is no
-          app-imposed size or file-count cap.
+        <div className="mx-auto mt-4 max-w-[760px] px-5">
+          <Callout tone="info" title="Huge file">
+            At least one file is 1 GB or larger. LovePDF Studio will stream it on disk with qpdf and related CLI tools
+            — it will not load the document into the page heap. Make sure the destination drive has enough free space.
+            There is no app-imposed size or file-count cap.
+          </Callout>
         </div>
       )}
 
       <div className="mx-auto mt-8 max-w-[760px] px-5">
         <div
-          className={`rounded-2xl bg-white p-8 shadow-drop ${drag ? 'ring-2 ring-ilp-red' : ''}`}
+          className={`rounded-2xl bg-white p-6 shadow-drop sm:p-8 ${drag ? 'ring-2 ring-ilp-red' : ''}`}
           onDragOver={(e) => {
             e.preventDefault()
             setDrag(true)
@@ -238,25 +259,27 @@ export function ToolWorkspace() {
           onDrop={(e) => void onDrop(e)}
         >
           {files.length === 0 ? (
-            <div className="drop-dash rounded-xl px-6 py-14 text-center">
-              <div className="mx-auto mb-5 flex justify-center">
-                <ToolIcon id={tool.id} color={tool.color} size={56} />
-              </div>
-              <button className="ilp-btn" onClick={() => void selectNative()}>
-                Select {tool.acceptLabel}
-              </button>
-              <p className="mt-3 text-sm text-ilp-muted">or drop {tool.acceptLabel} here</p>
-              <label className="mt-4 inline-block cursor-pointer text-xs text-ilp-red underline">
-                Use browser file picker
-                <input
-                  type="file"
-                  multiple={tool.maxFiles !== 1}
-                  accept={tool.accept.join(',')}
-                  className="hidden"
-                  onChange={(e) => void onInput(e)}
-                />
-              </label>
-            </div>
+            <EmptyDrop
+              icon={<ToolIcon id={tool.id} color={tool.color} size={52} />}
+              action={
+                <button className="ilp-btn" onClick={() => void selectNative()}>
+                  Select {tool.acceptLabel}
+                </button>
+              }
+              hint={`or drop ${tool.acceptLabel} here`}
+              extra={
+                <label className="mt-4 inline-block cursor-pointer text-xs font-semibold text-ilp-red">
+                  Use browser file picker
+                  <input
+                    type="file"
+                    multiple={tool.maxFiles !== 1}
+                    accept={tool.accept.join(',')}
+                    className="hidden"
+                    onChange={(e) => void onInput(e)}
+                  />
+                </label>
+              }
+            />
           ) : (
             <div>
               <div className="flex flex-wrap gap-3">
@@ -313,7 +336,7 @@ export function ToolWorkspace() {
               Paths never copy the file. Use this for documents that should not pass through a file picker buffer.
             </p>
             <textarea
-              className="mt-2 w-full rounded-lg border border-[#ececef] p-2 font-mono text-xs"
+              className="field mt-2 font-mono text-xs"
               rows={3}
               placeholder="/data/archive/huge.pdf"
               value={pathBox}
@@ -326,8 +349,8 @@ export function ToolWorkspace() {
         </div>
 
         {tool.options.length > 0 && (
-          <div className="mt-5 rounded-2xl bg-white p-6 shadow-drop">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-ilp-muted">Options</h2>
+          <div className="mt-5 rounded-2xl bg-white p-5 shadow-drop sm:p-6">
+            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-[0.14em] text-ilp-muted">Options</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               {tool.options.map((field) => (
                 <OptionInput
@@ -351,25 +374,41 @@ export function ToolWorkspace() {
           </p>
         )}
 
-        {busy && (
-          <div className="mt-6 rounded-xl bg-white p-5 shadow-drop">
-            <p className="text-sm font-medium text-ilp-dark">{progress?.message || 'Working on disk…'}</p>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#ececef]">
-              <div
-                className="h-full bg-ilp-red transition-all"
-                style={{ width: `${progress?.percent || 8}%` }}
-              />
-            </div>
+        {busy && <LoadingBar message={progress?.message || 'Working on disk…'} percent={progress?.percent || 8} />}
+
+        {error && (
+          <div className="mt-6">
+            <Callout tone="danger" title="Couldn’t finish this job">
+              {error}
+            </Callout>
           </div>
         )}
 
-        {error && (
-          <div className="mt-6 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm text-red-700">{error}</div>
-        )}
-
         {result?.ok && (
-          <div className="mt-6 mb-8 rounded-xl bg-white p-5 shadow-drop">
+          <div className="surface mt-6 mb-8 p-5">
             <p className="font-semibold text-ilp-dark">{result.message}</p>
+            {Boolean(result.extra?.truncated) && (
+              <p className="mt-2 text-sm text-amber-800">
+                Huge document: only a page window was indexed. Set a page range or tick “entire document”.
+              </p>
+            )}
+            {Array.isArray(result.extra?.failures) && (result.extra.failures as { name: string; error: string }[]).length > 0 && (
+              <ul className="mt-3 space-y-1 text-sm text-red-700">
+                {(result.extra.failures as { name: string; error: string }[]).map((f) => (
+                  <li key={f.name}>
+                    {f.name}: {f.error}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {typeof result.extra?.preview === 'string' && result.extra.preview && (
+              <pre className="mt-3 max-h-56 overflow-auto rounded-xl bg-[#f6f6f8] p-3 text-left font-mono text-[11px] leading-relaxed text-[#333]">
+                {result.extra.preview}
+              </pre>
+            )}
+            {typeof result.extra?.answer === 'string' && result.extra.answer && (
+              <div className="mt-3 whitespace-pre-wrap rounded-xl bg-[#fff7f6] p-3 text-left text-sm">{result.extra.answer}</div>
+            )}
             <ul className="mt-3 space-y-2">
               {result.outputs.map((o) => (
                 <li key={o.path} className="flex items-center justify-between gap-3 text-sm">
@@ -387,6 +426,9 @@ export function ToolWorkspace() {
                 </li>
               ))}
             </ul>
+            {tool.id === 'ask-pdf' && typeof result.extra?.indexDir === 'string' && (
+              <AskPanel indexDir={result.extra.indexDir} useLlm={opts.useLlm === 'true'} />
+            )}
             <button
               className="ilp-btn-outline mt-4"
               onClick={() => {
@@ -400,9 +442,9 @@ export function ToolWorkspace() {
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 border-t border-[#ececef] bg-white/95 shadow-bar">
-        <div className="mx-auto flex max-w-[860px] items-center justify-between gap-4 px-5 py-3">
-          <p className="hidden text-xs text-ilp-muted sm:block">{tool.description}</p>
+      <div className="fixed bottom-0 left-0 right-0 border-t border-[#ececef] bg-white/95 shadow-bar backdrop-blur">
+        <div className="mx-auto flex max-w-[860px] items-center justify-between gap-4 px-4 py-2.5 sm:px-5 sm:py-3">
+          <p className="hidden text-[12.5px] leading-snug text-ilp-muted sm:block">{tool.description}</p>
           <button className="ilp-btn shrink-0" disabled={!ready || busy} onClick={() => void run()}>
             {busy ? 'Processing…' : tool.action}
           </button>
@@ -448,7 +490,7 @@ function OptionInput({
       <label className="block text-sm">
         <span className="mb-1 block font-medium">{field.label}</span>
         <select
-          className="w-full rounded-lg border border-[#ececef] px-3 py-2"
+          className="field"
           value={value[field.key] || field.options[0].value}
           onChange={(e) => onChange(field.key, e.target.value)}
         >
@@ -486,7 +528,7 @@ function OptionInput({
               <input
                 type="number"
                 min={0}
-                className="mt-1 w-full rounded-lg border border-[#ececef] px-2 py-2 text-sm"
+                className="field mt-1"
                 value={value[k] || '0'}
                 onChange={(e) => onChange(k, e.target.value)}
               />
@@ -512,7 +554,7 @@ function OptionInput({
       <label className="block text-sm sm:col-span-2">
         <span className="mb-1 block font-medium">{field.label}</span>
         <textarea
-          className="w-full rounded-lg border border-[#ececef] px-3 py-2"
+          className="field"
           rows={3}
           placeholder={field.placeholder}
           value={value[field.key] || ''}
@@ -530,7 +572,7 @@ function OptionInput({
           min={field.type === 'number' ? field.min : undefined}
           max={field.type === 'number' ? field.max : undefined}
           placeholder={field.placeholder}
-          className="w-full rounded-lg border border-[#ececef] px-3 py-2"
+          className="field"
           value={value[field.key] || ''}
           onChange={(e) => onChange(field.key, e.target.value)}
         />
@@ -547,5 +589,67 @@ function PdfBadge({ ext }: { ext: string }) {
     <span className="inline-flex h-12 w-10 items-center justify-center rounded bg-[#e5322d] text-[10px] font-bold text-white">
       {label.slice(0, 4)}
     </span>
+  )
+}
+
+function AskPanel({ indexDir, useLlm }: { indexDir: string; useLlm: boolean }) {
+  const [q, setQ] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([])
+
+  async function send() {
+    const question = q.trim()
+    if (!question || busy) return
+    setBusy(true)
+    setErr(null)
+    setQ('')
+    setMessages((m) => [...m, { role: 'user', text: question }])
+    try {
+      const data = await apiPost<{ answer: string; usedLlm: boolean }>('/api/ask', {
+        indexDir,
+        question,
+        useLlm
+      })
+      setMessages((m) => [...m, { role: 'assistant', text: data.answer }])
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-5 border-t border-[#ececef] pt-4 text-left">
+      <h3 className="text-sm font-bold text-ilp-dark">Ask this PDF</h3>
+      <p className="mt-1 text-xs text-ilp-muted">
+        Retrieval uses on-disk chunks. {useLlm ? 'Cloud LLM is on for this session (passages only).' : 'Local passages only — tick Use cloud LLM and re-index to send text to a model.'}
+      </p>
+      <div className="mt-3 max-h-64 space-y-2 overflow-auto">
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            className={`rounded-xl px-3 py-2 text-sm ${m.role === 'user' ? 'bg-[#fff3f2] text-ilp-dark' : 'bg-[#f6f6f8]'}`}
+          >
+            <p className="whitespace-pre-wrap">{m.text}</p>
+          </div>
+        ))}
+      </div>
+      {err && <p className="mt-2 text-sm text-red-700">{err}</p>}
+      <div className="mt-3 flex gap-2">
+        <input
+          className="field"
+          placeholder="What is the closing balance?"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void send()
+          }}
+        />
+        <button className="ilp-btn h-10 shrink-0 px-4" disabled={busy || !q.trim()} onClick={() => void send()}>
+          {busy ? 'Asking…' : 'Ask'}
+        </button>
+      </div>
+    </div>
   )
 }

@@ -5,9 +5,20 @@ import { basename, join } from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { dialog, shell } from 'electron'
 import { EventEmitter } from 'node:events'
+import type { LlmProviderId } from '@shared/preferences'
 import { API_PORT, type EngineStatus, type FileRef, type JobRequest, type JobResult } from '@shared/types'
 import { detectBinaries, engineStatus } from './pdfinfo'
 import { defaultOutputDir, defaultTmp, inspectFile, makeFileRef, runJob } from './jobs'
+import { askParsed, extractEngines } from './extract'
+import {
+  applyPreferencePatch,
+  isMcpEnabled,
+  loadPreferences,
+  publicPreferences,
+  type PreferencePatch
+} from './preferences'
+import { testProvider } from './llm'
+import { handleMcpJsonRpc, isSafeIndexDir, MCP_TOOLS } from './mcp'
 import { ensureDir, extraPath, formatBytes } from './run'
 
 const bus = new EventEmitter()
@@ -91,15 +102,18 @@ async function pickFiles(multi: boolean, filters: { name: string; extensions: st
   return refs
 }
 
-export function startApiServer(port = API_PORT): Promise<void> {
+export async function startApiServer(port = API_PORT): Promise<void> {
   process.env.PATH = extraPath()
-  void ensureDir(outputDir)
+  const prefs = await loadPreferences()
+  if (prefs.outputDir) outputDir = prefs.outputDir
+  if (prefs.concurrency) concurrency = prefs.concurrency
+  await ensureDir(outputDir)
   const server = createServer((req, res) => {
     void handle(req, res)
   })
   return new Promise((resolve, reject) => {
     server.listen(port, '127.0.0.1', () => {
-      console.log(`LovePDF engine listening on http://127.0.0.1:${port}`)
+      console.log(`LovePDF Studio engine listening on http://127.0.0.1:${port}`)
       resolve()
     })
     server.on('error', reject)
@@ -116,12 +130,31 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   const url = new URL(req.url || '/', 'http://127.0.0.1')
   try {
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      send(res, 200, { ok: true })
+      send(res, 200, { ok: true, product: 'LovePDF Studio' })
+      return
+    }
+    if (req.method === 'GET' && url.pathname === '/api/settings') {
+      await loadPreferences()
+      send(res, 200, publicPreferences(outputDir, concurrency))
       return
     }
     if (req.method === 'GET' && url.pathname === '/api/status') {
       const status: EngineStatus = await engineStatus(defaultTmp(), outputDir, concurrency)
-      send(res, 200, { ...status, outputDir, formatFree: formatBytes(status.diskFreeBytes) })
+      const extract = await extractEngines()
+      const prefs = publicPreferences(outputDir, concurrency)
+      send(res, 200, {
+        ...status,
+        outputDir,
+        formatFree: formatBytes(status.diskFreeBytes),
+        extract,
+        llm: {
+          defaultProvider: prefs.defaultProvider,
+          configured: Object.values(prefs.providers)
+            .filter((p) => p.hasKey)
+            .map((p) => p.id),
+          encryption: prefs.encryption
+        }
+      })
       return
     }
     if (req.method === 'GET' && url.pathname === '/api/bins') {
@@ -129,13 +162,14 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       return
     }
     if (req.method === 'POST' && url.pathname === '/api/settings') {
-      const body = await json<{ outputDir?: string; concurrency?: number }>(req)
-      if (body.outputDir) {
-        outputDir = body.outputDir
+      const body = await json<PreferencePatch>(req)
+      const next = await applyPreferencePatch(body)
+      if (next.outputDir) {
+        outputDir = next.outputDir
         await ensureDir(outputDir)
       }
-      if (body.concurrency) concurrency = Math.max(1, Math.min(4, Number(body.concurrency)))
-      send(res, 200, { outputDir, concurrency })
+      if (next.concurrency) concurrency = next.concurrency
+      send(res, 200, publicPreferences(outputDir, concurrency))
       return
     }
     if (req.method === 'POST' && url.pathname === '/api/pick-dir') {
@@ -219,6 +253,72 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       }
       bus.on('progress:' + id, onProg)
       req.on('close', () => bus.off('progress:' + id, onProg))
+      return
+    }
+    if (req.method === 'POST' && url.pathname === '/api/keys/test') {
+      const body = await json<{ provider?: LlmProviderId }>(req)
+      if (!body.provider) {
+        send(res, 400, { error: 'provider is required' })
+        return
+      }
+      send(res, 200, await testProvider(body.provider))
+      return
+    }
+    if (req.method === 'POST' && url.pathname === '/api/ask') {
+      const body = await json<{ indexDir?: string; question?: string; useLlm?: boolean | string; provider?: string }>(req)
+      if (!body.indexDir || !body.question) {
+        send(res, 400, { error: 'indexDir and question are required' })
+        return
+      }
+      if (!isSafeIndexDir(body.indexDir, outputDir)) {
+        send(res, 400, { error: 'indexDir is not a LovePDF output folder' })
+        return
+      }
+      send(res, 200, await askParsed(body.indexDir, body.question, { useLlm: body.useLlm === true || body.useLlm === 'true', provider: body.provider }))
+      return
+    }
+    if ((req.method === 'GET' || req.method === 'POST') && (url.pathname === '/mcp' || url.pathname === '/api/mcp')) {
+      if (!isMcpEnabled()) {
+        send(res, 404, { error: 'MCP is disabled. Enable it in LovePDF Studio Settings.' })
+        return
+      }
+      if (req.method === 'GET') {
+        send(res, 200, {
+          name: 'lovepdf-studio',
+          protocol: 'json-rpc',
+          tools: MCP_TOOLS,
+          stdio: 'node mcp/lovepdf-mcp.mjs',
+          url: 'http://127.0.0.1:43128/mcp'
+        })
+        return
+      }
+      const body = await json<{ method?: string; id?: unknown; params?: Record<string, unknown>; jsonrpc?: string }>(req)
+      try {
+        const result = await handleMcpJsonRpc(body, async (job) => {
+          const full: JobRequest = {
+            id: randomUUID(),
+            tool: job.tool as JobRequest['tool'],
+            files: job.files.map((f) => {
+              const st = existsSync(f.path) ? statSync(f.path) : null
+              return makeFileRef(f.path, st?.size || 0)
+            }),
+            options: job.options,
+            outputDir: job.outputDir || outputDir
+          }
+          return enqueue(full)
+        }, outputDir)
+        if (result === null) {
+          send(res, 200, { jsonrpc: '2.0', result: {} })
+          return
+        }
+        send(res, 200, { jsonrpc: '2.0', id: body.id ?? null, result })
+      } catch (e) {
+        send(res, 200, {
+          jsonrpc: '2.0',
+          id: body.id ?? null,
+          error: { code: -32000, message: e instanceof Error ? e.message : String(e) }
+        })
+      }
       return
     }
     if (req.method === 'POST' && url.pathname === '/api/open') {

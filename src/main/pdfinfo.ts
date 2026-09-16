@@ -22,7 +22,8 @@ export function detectBinaries(): Record<string, string | null> {
     'soffice',
     'python3',
     'tesseract',
-    'zip'
+    'zip',
+    'pdfimages'
   ]
   const out: Record<string, string | null> = {}
   for (const n of names) out[n] = whichSync(n)

@@ -1,14 +1,26 @@
-import { app } from 'electron'
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { homedir, tmpdir } from 'node:os'
 import { basename, extname, join } from 'node:path'
 import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import type { FileRef, JobProgress, JobRequest, JobResult } from '@shared/types'
 import { chunk, copyFileStream, ensureDir, parseOrder, parseRanges, rmQuiet, run, uniquePath, whichSync } from './run'
 import { pdfInfo } from './pdfinfo'
+import { defaultOutputDir, defaultTmp } from './paths'
+import {
+  runAskIndexJob,
+  runExtractImagesJob,
+  runFormsJob,
+  runParseJob,
+  runStructuredExtract,
+  runSummarizeJob,
+  runTranslateJob
+} from './extract'
+
+export { defaultOutputDir, defaultTmp }
 
 export type Emit = (p: JobProgress) => void
+
+/* defaultOutputDir / defaultTmp live in ./paths */
 
 function workerPy(): string {
   const packed = join(process.resourcesPath || '', 'worker.py')
@@ -38,15 +50,6 @@ function must(bin: string, hint: string): string {
   const b = whichSync(bin)
   if (!b) throw new Error(`${bin} is not installed. ${hint}`)
   return b
-}
-
-export function defaultOutputDir(): string {
-  return join(homedir(), 'Documents', 'LovePDF')
-}
-
-export function defaultTmp(): string {
-  const base = app?.isReady?.() ? join(app.getPath('temp'), 'lovepdf') : join(tmpdir(), 'lovepdf')
-  return base
 }
 
 async function outDirFor(job: JobRequest): Promise<string> {
@@ -955,6 +958,22 @@ export async function runJob(job: JobRequest, cb: Emit): Promise<JobResult> {
       outputs.push(await resultFile(out))
       break
     }
+    case 'parse-pdf':
+      return runParseJob(job, destRoot, cb)
+    case 'extract-bank':
+      return runStructuredExtract('bank', job, destRoot, cb)
+    case 'extract-invoice':
+      return runStructuredExtract('invoice', job, destRoot, cb)
+    case 'ask-pdf':
+      return runAskIndexJob(job, destRoot, cb)
+    case 'summarize-pdf':
+      return runSummarizeJob(job, destRoot, cb)
+    case 'translate-pdf':
+      return runTranslateJob(job, destRoot, cb)
+    case 'pdf-forms':
+      return runFormsJob(job, destRoot, cb)
+    case 'extract-images':
+      return runExtractImagesJob(job, destRoot, cb)
     default:
       throw new Error(`Unknown tool: ${tool satisfies never}`)
   }

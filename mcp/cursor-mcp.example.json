@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "lovepdf": {
+      "command": "node",
+      "args": ["mcp/lovepdf-mcp.mjs"],
+      "env": {
+        "LOVEPDF_ENGINE": "http://127.0.0.1:43128"
+      }
+    },
+    "markitdown": {
+      "command": "markitdown-mcp"
+    }
+  }
+}

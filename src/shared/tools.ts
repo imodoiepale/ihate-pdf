@@ -6,7 +6,8 @@ export const GROUPS: { id: ToolGroup; label: string }[] = [
   { id: 'to-pdf', label: 'Convert to PDF' },
   { id: 'from-pdf', label: 'Convert from PDF' },
   { id: 'edit', label: 'Edit PDF' },
-  { id: 'security', label: 'PDF security' }
+  { id: 'security', label: 'PDF security' },
+  { id: 'ai', label: 'Analyze & AI' }
 ]
 
 const pdf = ['.pdf']
@@ -416,7 +417,7 @@ export const TOOLS: ToolDef[] = [
     id: 'protect',
     title: 'Protect PDF',
     tagline: 'Protect PDF files with a password. Encrypt PDF documents to prevent unauthorized access.',
-    description: 'AES-256 encryption via qpdf. Keep the password — LovePDF cannot recover it.',
+    description: 'AES-256 encryption via qpdf. Keep the password — LovePDF Studio cannot recover it.',
     color: '#2f8f7b',
     group: 'security',
     accept: pdf,
@@ -635,6 +636,173 @@ export const TOOLS: ToolDef[] = [
     minFiles: 1,
     action: 'Convert to Markdown',
     options: []
+  },
+  {
+    id: 'parse-pdf',
+    title: 'Analyze PDF',
+    tagline: 'Fast local text + layout extract. ~2s for normal documents; page ranges for huge files.',
+    description:
+      'Microsoft MarkItDown (the ~2-second scanner) when installed, otherwise Poppler pdftotext. Writes markdown, layout text, tables, and retrieval chunks on disk. Nothing is sent to the cloud.',
+    color: '#5b4bdb',
+    group: 'ai',
+    accept: pdf,
+    acceptLabel: 'PDF files',
+    minFiles: 1,
+    action: 'Analyze PDF',
+    options: [
+      { key: 'pages', label: 'Pages (blank = auto cap on huge files)', type: 'text', placeholder: '1-20' },
+      { key: 'entire', label: 'Index the entire document (slow on huge files)', type: 'checkbox' }
+    ]
+  },
+  {
+    id: 'extract-bank',
+    title: 'Bank extract',
+    tagline: 'Bulk-extract accounts, dates, and transactions from statements into CSV + JSON.',
+    description:
+      'Local regex + table parse first. Optionally refine with your LLM key. One failed file does not abort the batch. Files stay on disk unless you tick Use cloud LLM.',
+    color: '#1f7a46',
+    group: 'ai',
+    accept: pdf,
+    acceptLabel: 'statement PDFs',
+    minFiles: 1,
+    action: 'Extract statements',
+    options: [
+      { key: 'pages', label: 'Pages (blank = auto)', type: 'text', placeholder: '1-12' },
+      { key: 'useLlm', label: 'Use cloud LLM to refine (sends extracted text, not the PDF bytes)', type: 'checkbox' }
+    ]
+  },
+  {
+    id: 'extract-invoice',
+    title: 'Invoice extract',
+    tagline: 'Bulk-extract vendors, totals, and line items from invoices and receipts.',
+    description:
+      'Works locally without a key. Tick Use cloud LLM only when you want a model to fill gaps from the extracted text.',
+    color: '#d4522a',
+    group: 'ai',
+    accept: pdf,
+    acceptLabel: 'invoice or receipt PDFs',
+    minFiles: 1,
+    action: 'Extract invoices',
+    options: [
+      { key: 'pages', label: 'Pages (blank = auto)', type: 'text', placeholder: '1-5' },
+      { key: 'useLlm', label: 'Use cloud LLM to refine (sends extracted text, not the PDF bytes)', type: 'checkbox' }
+    ]
+  },
+  {
+    id: 'ask-pdf',
+    title: 'Ask PDF',
+    tagline: 'Chat with extracted text. Retrieval over on-disk chunks — never the whole 1 TB in context.',
+    description:
+      'Indexes pages to chunk files, then answers from the top matching passages. Local retrieval always works; LLM answers need a key in Settings.',
+    color: '#2b7cd3',
+    group: 'ai',
+    accept: pdf,
+    acceptLabel: 'PDF file',
+    minFiles: 1,
+    maxFiles: 1,
+    action: 'Index PDF',
+    options: [
+      { key: 'pages', label: 'Pages (blank = auto cap on huge files)', type: 'text', placeholder: '1-40' },
+      { key: 'entire', label: 'Index the entire document', type: 'checkbox' },
+      { key: 'question', label: 'Optional first question', type: 'textarea', placeholder: 'What is the closing balance?' },
+      { key: 'useLlm', label: 'Use cloud LLM to answer (sends retrieved passages only)', type: 'checkbox' }
+    ]
+  },
+  {
+    id: 'summarize-pdf',
+    title: 'Summarize PDF',
+    tagline: 'Local extractive summary, or a cloud LLM summary if you opt in.',
+    description:
+      'Local extractive summary from headings and key sentences on disk. Optional LLM rewrite uses extracted text only.',
+    color: '#7a5af5',
+    group: 'ai',
+    accept: pdf,
+    acceptLabel: 'PDF files',
+    minFiles: 1,
+    action: 'Summarize',
+    options: [
+      { key: 'pages', label: 'Pages (blank = auto)', type: 'text', placeholder: '1-20' },
+      { key: 'useLlm', label: 'Use cloud LLM (sends extracted text, not the PDF)', type: 'checkbox' }
+    ]
+  },
+  {
+    id: 'translate-pdf',
+    title: 'Translate PDF',
+    tagline: 'Translate extracted markdown with your API key. Layout-perfect PDF rewrite is not claimed.',
+    description:
+      'Translates the extracted text/markdown layer with your API key. Layout-perfect PDF rewrite is not claimed. Source files are not uploaded; only extracted text is sent.',
+    color: '#2bb3c0',
+    group: 'ai',
+    accept: pdf,
+    acceptLabel: 'PDF files',
+    minFiles: 1,
+    action: 'Translate',
+    options: [
+      {
+        key: 'target',
+        label: 'Target language',
+        type: 'select',
+        options: [
+          { value: 'en', label: 'English' },
+          { value: 'es', label: 'Spanish' },
+          { value: 'fr', label: 'French' },
+          { value: 'de', label: 'German' },
+          { value: 'pt', label: 'Portuguese' },
+          { value: 'it', label: 'Italian' },
+          { value: 'zh', label: 'Chinese' },
+          { value: 'ja', label: 'Japanese' },
+          { value: 'ko', label: 'Korean' },
+          { value: 'ar', label: 'Arabic' }
+        ]
+      },
+      { key: 'pages', label: 'Pages (blank = auto)', type: 'text', placeholder: '1-10' }
+    ]
+  },
+  {
+    id: 'pdf-forms',
+    title: 'PDF Forms',
+    tagline: 'List, fill, or flatten AcroForm fields. Scanned forms need OCR first.',
+    description:
+      'Uses pypdf on disk. AI field detection on flattened scans is not faked — list mode reports when no fields exist.',
+    color: '#44546a',
+    group: 'edit',
+    accept: pdf,
+    acceptLabel: 'PDF file',
+    minFiles: 1,
+    maxFiles: 1,
+    action: 'Process form',
+    options: [
+      {
+        key: 'mode',
+        label: 'Mode',
+        type: 'radio',
+        options: [
+          { value: 'list', label: 'List fields → JSON' },
+          { value: 'fill', label: 'Fill fields' },
+          { value: 'flatten', label: 'Fill and flatten' }
+        ]
+      },
+      {
+        key: 'values',
+        label: 'Field values (JSON object)',
+        type: 'textarea',
+        placeholder: '{"FullName":"Ada Lovelace","Date":"2026-01-01"}'
+      }
+    ]
+  },
+  {
+    id: 'extract-images',
+    title: 'Extract images',
+    tagline: 'Pull embedded images out of a PDF without rasterizing whole pages.',
+    description:
+      'Uses Poppler pdfimages. For page screenshots use PDF to JPG instead. Missing binary shows an install hint.',
+    color: '#f0c14b',
+    group: 'from-pdf',
+    accept: pdf,
+    acceptLabel: 'PDF files',
+    minFiles: 1,
+    action: 'Extract images',
+    options: [{ key: 'pages', label: 'Pages (blank = all)', type: 'text', placeholder: '1-5' }]
   }
 ]
 

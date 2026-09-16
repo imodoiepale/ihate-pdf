@@ -3,6 +3,7 @@ import { Footer } from './components/Footer'
 import { Header } from './components/Header'
 import { AllToolsPage } from './pages/AllToolsPage'
 import { HomePage } from './pages/HomePage'
+import { SettingsPage } from './pages/SettingsPage'
 import { ToolWorkspace } from './pages/ToolWorkspace'
 
 function Shell() {
@@ -15,6 +16,7 @@ function Shell() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/tools" element={<AllToolsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/tool/:id" element={<ToolWorkspace />} />
         </Routes>
       </main>

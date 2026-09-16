@@ -1,12 +1,31 @@
-node_modules
-out
-dist
-.DS_Store
+# dependencies & build
+node_modules/
+out/
+dist/
+release/
+*.tsbuildinfo
+
+# secrets — never commit keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+keys/
+llm-secrets.bin
+llm-keys.bin
+.machine-key
+
+# logs & OS
 *.log
-.tmp
-.test-artifacts
-agent-tools
-.vscode
-.idea
-*.tsbuildinfo
-*.tsbuildinfo
+.DS_Store
+Thumbs.db
+
+# editor / agent scratch
+.vscode/
+.idea/
+agent-tools/
+.tmp/
+.test-artifacts/
+/tmp/

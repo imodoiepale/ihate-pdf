@@ -16,10 +16,10 @@ async function createWindow(): Promise<void> {
   const win = new BrowserWindow({
     width: 1280,
     height: 860,
-    minWidth: 880,
-    minHeight: 640,
+    minWidth: 760,
+    minHeight: 600,
     backgroundColor: '#ffffff',
-    title: 'LovePDF',
+    title: 'LovePDF Studio',
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -44,7 +44,7 @@ async function createWindow(): Promise<void> {
 async function boot(): Promise<void> {
   await startApiServer()
   if (API_ONLY) {
-    console.log(`LovePDF API on http://127.0.0.1:43128 (renderer http://127.0.0.1:${RENDERER_PORT})`)
+    console.log(`LovePDF Studio API on http://127.0.0.1:43128 (renderer http://127.0.0.1:${RENDERER_PORT})`)
     return
   }
   await createWindow()

@@ -1,5 +1,5 @@
-appId: com.lovepdf.desktop
-productName: LovePDF Desktop
+appId: com.lovepdf.studio
+productName: LovePDF Studio
 directories:
   buildResources: build
 files:
@@ -13,6 +13,8 @@ files:
 extraResources:
   - from: resources/worker.py
     to: worker.py
+  - from: resources/extract.py
+    to: extract.py
   - from: resources/bin
     to: bin
 linux:

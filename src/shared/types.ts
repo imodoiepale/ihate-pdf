@@ -29,8 +29,16 @@ export type ToolId =
   | 'redact'
   | 'crop'
   | 'pdf-to-markdown'
+  | 'parse-pdf'
+  | 'extract-bank'
+  | 'extract-invoice'
+  | 'ask-pdf'
+  | 'summarize-pdf'
+  | 'translate-pdf'
+  | 'pdf-forms'
+  | 'extract-images'
 
-export type ToolGroup = 'organize' | 'optimize' | 'to-pdf' | 'from-pdf' | 'edit' | 'security'
+export type ToolGroup = 'organize' | 'optimize' | 'to-pdf' | 'from-pdf' | 'edit' | 'security' | 'ai'
 
 export type OptionField =
   | {
@@ -121,6 +129,12 @@ export interface EngineStatus {
   outputDir: string
   concurrency: number
   diskFreeBytes: number
+  extract?: Record<string, boolean | string>
+  llm?: {
+    defaultProvider: string | null
+    configured: string[]
+    encryption: string
+  }
 }
 
 export const API_PORT = 43128
