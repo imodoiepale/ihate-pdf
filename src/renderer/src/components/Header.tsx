@@ -33,13 +33,22 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-7 text-[14px] font-medium text-[#4b4b53] lg:flex">
-          <NavLink to="/tool/merge" className="hover:text-ilp-red">
+          <NavLink
+            to="/tool/merge"
+            className={({ isActive }) => (isActive ? 'text-ilp-red' : 'hover:text-ilp-red')}
+          >
             Merge PDF
           </NavLink>
-          <NavLink to="/tool/split" className="hover:text-ilp-red">
+          <NavLink
+            to="/tool/split"
+            className={({ isActive }) => (isActive ? 'text-ilp-red' : 'hover:text-ilp-red')}
+          >
             Split PDF
           </NavLink>
-          <NavLink to="/tool/compress" className="hover:text-ilp-red">
+          <NavLink
+            to="/tool/compress"
+            className={({ isActive }) => (isActive ? 'text-ilp-red' : 'hover:text-ilp-red')}
+          >
             Compress PDF
           </NavLink>
           <div className="relative" ref={panel}>
@@ -87,7 +96,10 @@ export function Header() {
               </div>
             )}
           </div>
-          <NavLink to="/tools" className="hover:text-ilp-red">
+          <NavLink
+            to="/tools"
+            className={({ isActive }) => (isActive ? 'text-ilp-red' : 'hover:text-ilp-red')}
+          >
             All PDF Tools
           </NavLink>
         </nav>

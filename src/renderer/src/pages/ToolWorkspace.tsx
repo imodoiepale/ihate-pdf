@@ -200,7 +200,7 @@ export function ToolWorkspace() {
   }
 
   return (
-    <div className="tool-sand min-h-[calc(100vh-70px)] pb-28">
+    <div className="tool-sand min-h-[calc(100vh-70px)] pb-40">
       <div className="mx-auto max-w-[860px] px-5 pt-10 text-center">
         <h1 className="text-[34px] font-bold text-ilp-dark">{tool.title}</h1>
         <p className="mx-auto mt-3 max-w-[620px] text-[16px] text-[#5c5c66]">{tool.tagline}</p>
@@ -368,7 +368,7 @@ export function ToolWorkspace() {
         )}
 
         {result?.ok && (
-          <div className="mt-6 rounded-xl bg-white p-5 shadow-drop">
+          <div className="mt-6 mb-8 rounded-xl bg-white p-5 shadow-drop">
             <p className="font-semibold text-ilp-dark">{result.message}</p>
             <ul className="mt-3 space-y-2">
               {result.outputs.map((o) => (
