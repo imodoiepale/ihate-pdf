@@ -1,8 +1,9 @@
-import type { DesktopApi } from './index'
-
 declare global {
   interface Window {
-    api?: DesktopApi
+    lovepdf?: {
+      desktop: boolean
+      versions: NodeJS.ProcessVersions
+    }
   }
 }
 
