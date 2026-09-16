@@ -10,6 +10,11 @@ files:
   - '!{tailwind.config.js,postcss.config.js}'
   - '!scripts/*'
   - '!*.md'
+extraResources:
+  - from: resources/worker.py
+    to: worker.py
+  - from: resources/bin
+    to: bin
 linux:
   target:
     - dir

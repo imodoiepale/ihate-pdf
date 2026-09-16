@@ -125,6 +125,22 @@ export function ToolWorkspace() {
     })
   }
 
+  const missingHint = useMemo(() => {
+    if (!tool || !status) return null
+    const bins = status.binaries
+    const need = (name: string, hint: string) => (!bins[name] ? hint : null)
+    if (['word-to-pdf', 'ppt-to-pdf', 'excel-to-pdf', 'pdf-to-word', 'pdf-to-ppt', 'pdf-to-excel', 'html-to-pdf'].includes(tool.id)) {
+      return need('soffice', 'LibreOffice is not installed. Office conversion needs soffice. Linux: sudo apt install libreoffice')
+    }
+    if (tool.id === 'ocr') return need('tesseract', 'Tesseract is not installed. Linux: sudo apt install tesseract-ocr')
+    if (tool.id === 'jpg-to-pdf' || tool.id === 'scan-to-pdf') {
+      return need('img2pdf', 'img2pdf is not installed. Linux: sudo apt install python3-img2pdf')
+    }
+    if (tool.id === 'pdf-to-jpg') return need('pdftoppm', 'Poppler is not installed. Linux: sudo apt install poppler-utils')
+    if (tool.id === 'pdf-to-pdfa') return need('gs', 'Ghostscript is not installed. Linux: sudo apt install ghostscript')
+    return need('qpdf', 'qpdf is not installed. Linux: sudo apt install qpdf')
+  }, [tool, status])
+
   const ready = useMemo(() => {
     if (!tool) return false
     if (tool.id === 'html-to-pdf' && opts.url) return true
@@ -139,6 +155,7 @@ export function ToolWorkspace() {
     const jobId = crypto.randomUUID()
     setProgress({ jobId, percent: 1, message: 'Starting…' })
     const stop = subscribeJob(jobId, setProgress)
+    await new Promise((r) => window.setTimeout(r, 40))
     try {
       const data = await apiPost<JobResult>('/api/jobs', {
         id: jobId,
@@ -193,6 +210,12 @@ export function ToolWorkspace() {
         <div className="mx-auto mt-6 max-w-[760px] rounded-lg border border-red-200 bg-white px-4 py-3 text-sm text-red-700">
           The desktop engine is not running. Start LovePDF with <code>npm run dev</code> so file picking and PDF jobs
           can use your disk.
+        </div>
+      )}
+
+      {missingHint && (
+        <div className="mx-auto mt-4 max-w-[760px] rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          {missingHint}
         </div>
       )}
 
@@ -498,21 +521,24 @@ function OptionInput({
       </label>
     )
   }
-  return (
-    <label className="block text-sm">
-      <span className="mb-1 block font-medium">{field.label}</span>
-      <input
-        type={field.type}
-        min={field.type === 'number' ? field.min : undefined}
-        max={field.type === 'number' ? field.max : undefined}
-        placeholder={field.placeholder}
-        className="w-full rounded-lg border border-[#ececef] px-3 py-2"
-        value={value[field.key] || ''}
-        onChange={(e) => onChange(field.key, e.target.value)}
-      />
-      {'hint' in field && field.hint && <span className="mt-1 block text-xs text-ilp-muted">{field.hint}</span>}
-    </label>
-  )
+  if (field.type === 'text' || field.type === 'password' || field.type === 'number') {
+    return (
+      <label className="block text-sm">
+        <span className="mb-1 block font-medium">{field.label}</span>
+        <input
+          type={field.type}
+          min={field.type === 'number' ? field.min : undefined}
+          max={field.type === 'number' ? field.max : undefined}
+          placeholder={field.placeholder}
+          className="w-full rounded-lg border border-[#ececef] px-3 py-2"
+          value={value[field.key] || ''}
+          onChange={(e) => onChange(field.key, e.target.value)}
+        />
+        {'hint' in field && field.hint && <span className="mt-1 block text-xs text-ilp-muted">{field.hint}</span>}
+      </label>
+    )
+  }
+  return null
 }
 
 function PdfBadge({ ext }: { ext: string }) {

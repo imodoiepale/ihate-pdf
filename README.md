@@ -1,22 +1,25 @@
 # LovePDF Desktop
 
-A local **Electron** PDF toolbox with an iLovePDF-style UI. Files never leave this computer. There is no upload cap, page cap, or cloud storage quota — the only limit is disk space.
+A local-first desktop PDF toolbox with an iLovePDF-style interface. Merge, split, compress, convert, crop, watermark, protect, and batch-process documents **on this computer**. Nothing is uploaded. There is no account, no cloud quota, and no artificial file-size or file-count cap.
 
 ## Why this exists
 
-Browser PDF sites choke on three things this app is built for:
+Browser PDF sites hit three walls: upload limits, storage quotas, and RAM. LovePDF Desktop keeps every file on disk and shells out to streaming CLI tools (`qpdf`, Poppler, Ghostscript, LibreOffice, img2pdf). A 1 TB PDF is limited by **free disk space and time**, not by the JavaScript heap.
 
-- **Margins** — crop millimetres off a PDF, or wrap scans/images onto A4/Letter with small, big, or custom borders.
-- **Storage** — output goes to `~/Documents/LovePDF` (or any folder you pick). Nothing is uploaded.
-- **Many / huge PDFs** — merge is batched through `qpdf` so you are not blocked by a command-line length limit or by loading a file into JavaScript. A 1 TB document is streamed and rewritten on disk; it is never read into the renderer heap.
+## How to run
 
-## Tools
+System tools (install once):
 
-Merge, split, compress, rotate, organize, repair, crop, page numbers, watermark, edit (text overlay), sign, protect, unlock, redact, compare, OCR, JPG/scan to PDF, PDF to JPG, Word/PowerPoint/Excel to PDF, PDF to Word/PPT/Excel/Markdown/PDF-A, HTML to PDF.
+```bash
+# Debian / Ubuntu
+sudo apt install qpdf poppler-utils ghostscript python3-img2pdf imagemagick libreoffice-nogui python3-reportlab python3-pikepdf zip
 
-## Run
+# macOS
+brew install qpdf poppler ghostscript img2pdf imagemagick
+# LibreOffice from https://www.libreoffice.org/
+```
 
-Needs Node 20+, and on Linux: `qpdf`, `poppler-utils`, `ghostscript`, LibreOffice, `tesseract-ocr`, and `img2pdf` (`pip install img2pdf reportlab pikepdf`).
+Then:
 
 ```bash
 npm install
@@ -25,26 +28,60 @@ npm run dev
 
 That starts:
 
-- the desktop window (Electron)
-- the renderer at [http://127.0.0.1:43127](http://127.0.0.1:43127)
-- a local engine API at `http://127.0.0.1:43128`
+- the Vite renderer at **http://127.0.0.1:43127**
+- the local engine API at **http://127.0.0.1:43128**
+- an Electron window (use `--no-sandbox` automatically in this project)
 
-On Linux containers Electron needs `--no-sandbox` (already in `npm run dev`). If there is no display, run under Xvfb.
+Renderer-only (UI without the desktop window):
 
 ```bash
-npx electron-vite build
+npm run dev:web
 ```
 
-## How large files are handled
+The engine still has to be running for file picking and jobs. Prefer `npm run dev`.
 
-- The UI sends **file paths**, not file bytes. Use **Add by absolute path** for archives that should not pass through a picker.
-- Merge/split/rotate/encrypt call **qpdf**, which maps objects instead of buffering the whole document in Node.
-- Many files are merged in groups of 30, then those groups are merged, so argv and RAM stay bounded.
-- Image wrapping uses **img2pdf** (lossless, optional `--from-file` with NUL-separated paths).
-- Office conversion uses headless **LibreOffice** with an isolated user profile per job.
-- Temp files live under the OS temp dir and are deleted when a job finishes.
-- Processing a 1 TB PDF needs roughly **another 1 TB free** for the output (and sometimes a temp copy). The home screen and each tool show free disk space.
+Smoke-test the PDF CLI path:
 
-## Keyboard / batch
+```bash
+npm run smoke
+```
 
-Drop many files onto a tool, reorder with ↑ ↓, and run. Compress, rotate, protect, unlock, and office conversions process the list as a queue (two jobs at a time by default).
+## Tools
+
+Organize: Merge, Split, Extract pages, Delete pages, Organize / reorder, Rotate  
+Optimize: Compress, Repair, PDF/A  
+Convert to PDF: JPG/scan to PDF, Word, Excel, PowerPoint, HTML  
+Convert from PDF: JPG, Word, Excel, PowerPoint, Markdown  
+Edit: Watermark, page numbers, crop/margins, add text, OCR (needs Tesseract)  
+Security: Protect, Unlock, Sign (image stamp), Redact, Compare
+
+If a system binary is missing, the job fails with an install hint instead of a silent stub.
+
+## 1 TB / huge-file strategy (honest)
+
+- The renderer never reads file bytes into `Buffer` / `ArrayBuffer` for processing. It sends **paths**.
+- `qpdf` concatenates and splits using the page tree; it does not load all pages into Node.
+- Intermediate work lives in the OS temp directory and is deleted when the job finishes.
+- Outputs go to `~/Documents/LovePDF` (changeable per tool).
+- Ghostscript (lossy compress, PDF/A, some crop paths) can use more RAM. Files over ~2 GB stay on the qpdf path when that is safer.
+- img2pdf wraps JPEG/PNG without decoding them into a giant bitmap.
+- LibreOffice conversions are **best-effort** and need LibreOffice installed. Scanned PDFs will not become perfect Word/Excel files.
+- Page thumbnails are not generated for huge documents; use page ranges.
+- Processing a 1 TB file still needs roughly that much **free disk** for the output (and sometimes a temporary sibling). There is no magic that writes a 1 TB result onto a 200 GB disk.
+
+## Architecture
+
+```
+Electron main  →  HTTP engine on 127.0.0.1:43128  →  qpdf / gs / pdftoppm / soffice / img2pdf
+React renderer →  Vite on 127.0.0.1:43127         →  iLovePDF-like UI, IPC-free fetch + SSE progress
+```
+
+Queue: jobs run with limited concurrency so a batch of hundreds of PDFs does not fork hundreds of processes at once.
+
+## Limitations
+
+- OCR needs `tesseract-ocr`.
+- PDF → Office layout is LibreOffice’s importer, not a cloud reconstruction.
+- Image-stamp signatures are not PAdES certificates.
+- HTML-from-URL printing needs the Electron window (Chromium). Local HTML files use LibreOffice.
+- pikepdf crop walks page boxes; it is disk-backed but not instantaneous on enormous page counts.

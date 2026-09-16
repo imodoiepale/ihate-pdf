@@ -5,7 +5,7 @@ import { homedir, tmpdir } from 'node:os'
 import { basename, extname, join } from 'node:path'
 import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import type { FileRef, JobProgress, JobRequest, JobResult } from '@shared/types'
-import { chunk, copyFileStream, ensureDir, extraPath, parseOrder, parseRanges, rmQuiet, run, uniquePath, whichSync } from './run'
+import { chunk, copyFileStream, ensureDir, parseOrder, parseRanges, rmQuiet, run, uniquePath, whichSync } from './run'
 import { pdfInfo } from './pdfinfo'
 
 export type Emit = (p: JobProgress) => void
@@ -123,7 +123,8 @@ async function mergePdfs(paths: string[], output: string, password: string | und
     for (const group of groups) {
       gi += 1
       onChunk(gi, groups.length)
-      const next = gi === groups.length && current === null && groups.length === 1 ? output : join(tmp, `m-${gi}.pdf`)
+      const next: string =
+        gi === groups.length && current === null && groups.length === 1 ? output : join(tmp, `m-${gi}.pdf`)
       const pages: string[] = []
       if (current) pages.push(current, '1-z')
       for (const p of group) pages.push(p, '1-z')
@@ -980,5 +981,3 @@ export function makeFileRef(path: string, size: number): FileRef {
     ext: extname(path).toLowerCase()
   }
 }
-
-export { extraPath }
