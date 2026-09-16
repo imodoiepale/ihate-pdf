@@ -7,12 +7,13 @@ export const MCP_TOOLS = [
   {
     name: 'parse_pdf',
     description:
-      'Fast local PDF parse (MarkItDown ~2s path or pdftotext). Writes markdown, layout, tables, and chunks on disk. Does not upload files.',
+      'Fast local PDF parse. Default engine is PyMuPDF (typically well under 2 seconds). Writes markdown, layout, tables, and chunks on disk. Does not upload files.',
     inputSchema: {
       type: 'object',
       properties: {
         path: { type: 'string', description: 'Absolute path to a PDF' },
         pages: { type: 'string', description: 'Optional page range, e.g. 1-10' },
+        engine: { type: 'string', description: 'auto | pymupdf | markitdown | pdftotext' },
         outputDir: { type: 'string' }
       },
       required: ['path']
@@ -21,7 +22,22 @@ export const MCP_TOOLS = [
   {
     name: 'extract_bank',
     description:
-      'Extract accounts, dates, and transactions from one or more bank-statement PDFs into JSON/CSV. Local by default; set useLlm true to send extracted text to the configured provider.',
+      'Line-by-line extract of accounts, dates, and transactions from bank-statement PDFs. Auto-detects M-PESA. Local by default; set useLlm true to send extracted text to the configured provider.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        paths: { type: 'array', items: { type: 'string' } },
+        path: { type: 'string' },
+        pages: { type: 'string' },
+        useLlm: { type: 'boolean' },
+        outputDir: { type: 'string' }
+      }
+    }
+  },
+  {
+    name: 'extract_mpesa',
+    description:
+      'Extract Safaricom M-PESA statement lines: receipt, time, details, Paid In, Withdrawn, Balance, MSISDN.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -42,6 +58,23 @@ export const MCP_TOOLS = [
       properties: {
         paths: { type: 'array', items: { type: 'string' } },
         path: { type: 'string' },
+        pages: { type: 'string' },
+        useLlm: { type: 'boolean' },
+        outputDir: { type: 'string' }
+      }
+    }
+  },
+  {
+    name: 'extract_anything',
+    description:
+      'Extract arbitrary fields from a PDF. Pass a plain-English query and/or a JSON schema. Local entities always run; useLlm fills the schema from extracted text.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        paths: { type: 'array', items: { type: 'string' } },
+        path: { type: 'string' },
+        query: { type: 'string' },
+        schema: { type: 'string', description: 'JSON schema or instruction' },
         pages: { type: 'string' },
         useLlm: { type: 'boolean' },
         outputDir: { type: 'string' }
@@ -113,10 +146,13 @@ export async function handleMcpJsonRpc(
       path?: string
       paths?: string[]
       pages?: string
+      engine?: string
       useLlm?: boolean
       outputDir?: string
       question?: string
       indexDir?: string
+      query?: string
+      schema?: string
     }
     const dest = args.outputDir || outputDir
     if (name === 'parse_pdf') {
@@ -124,19 +160,32 @@ export async function handleMcpJsonRpc(
       const result = await enqueue({
         tool: 'parse-pdf',
         files: filesOf({ path: args.path }),
-        options: args.pages ? { pages: args.pages } : {},
+        options: {
+          ...(args.pages ? { pages: args.pages } : {}),
+          ...(args.engine ? { engine: args.engine } : {})
+        },
         outputDir: dest
       })
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
     }
-    if (name === 'extract_bank' || name === 'extract_invoice') {
+    if (name === 'extract_bank' || name === 'extract_invoice' || name === 'extract_mpesa' || name === 'extract_anything') {
       const files = filesOf(args)
       if (!files.length) throw new Error('path or paths is required')
+      const tool =
+        name === 'extract_bank'
+          ? 'extract-bank'
+          : name === 'extract_invoice'
+            ? 'extract-invoice'
+            : name === 'extract_mpesa'
+              ? 'extract-mpesa'
+              : 'extract-anything'
       const result = await enqueue({
-        tool: name === 'extract_bank' ? 'extract-bank' : 'extract-invoice',
+        tool,
         files,
         options: {
           ...(args.pages ? { pages: args.pages } : {}),
+          ...(args.query ? { query: args.query } : {}),
+          ...(args.schema ? { schema: args.schema } : {}),
           useLlm: args.useLlm ? 'true' : 'false'
         },
         outputDir: dest

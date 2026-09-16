@@ -640,9 +640,9 @@ export const TOOLS: ToolDef[] = [
   {
     id: 'parse-pdf',
     title: 'Analyze PDF',
-    tagline: 'Fast local text + layout extract. ~2s for normal documents; page ranges for huge files.',
+    tagline: 'Sub-2-second PyMuPDF parse by default. Page ranges for huge files.',
     description:
-      'Microsoft MarkItDown (the ~2-second scanner) when installed, otherwise Poppler pdftotext. Writes markdown, layout text, tables, and retrieval chunks on disk. Nothing is sent to the cloud.',
+      'PyMuPDF is the default sub-2-second engine (often tens of milliseconds on digital PDFs). Falls back to MarkItDown (~2 s markdown) and Poppler pdftotext for huge files. Writes markdown, layout, tables, and retrieval chunks on disk. Nothing is sent to the cloud.',
     color: '#5b4bdb',
     group: 'ai',
     accept: pdf,
@@ -651,15 +651,27 @@ export const TOOLS: ToolDef[] = [
     action: 'Analyze PDF',
     options: [
       { key: 'pages', label: 'Pages (blank = auto cap on huge files)', type: 'text', placeholder: '1-20' },
-      { key: 'entire', label: 'Index the entire document (slow on huge files)', type: 'checkbox' }
+      { key: 'entire', label: 'Index the entire document (slow on huge files)', type: 'checkbox' },
+      {
+        key: 'engine',
+        label: 'Parser',
+        type: 'select',
+        options: [
+          { value: 'auto', label: 'Auto (PyMuPDF → MarkItDown → Poppler)' },
+          { value: 'pymupdf', label: 'PyMuPDF only (fastest local)' },
+          { value: 'markitdown', label: 'MarkItDown markdown' },
+          { value: 'pdftotext', label: 'Poppler pdftotext (huge-file safe)' }
+        ]
+      },
+      { key: 'password', label: 'PDF password (if encrypted)', type: 'password' }
     ]
   },
   {
     id: 'extract-bank',
     title: 'Bank extract',
-    tagline: 'Bulk-extract accounts, dates, and transactions from statements into CSV + JSON.',
+    tagline: 'Line-by-line accounts, dates, and transactions from statements into CSV + JSON.',
     description:
-      'Local regex + table parse first. Optionally refine with your LLM key. One failed file does not abort the batch. Files stay on disk unless you tick Use cloud LLM.',
+      'Reads every ledger line (tables first, then layout text). Auto-detects Safaricom M-PESA and switches to that parser. Optional LLM refine sends extracted text only.',
     color: '#1f7a46',
     group: 'ai',
     accept: pdf,
@@ -668,6 +680,25 @@ export const TOOLS: ToolDef[] = [
     action: 'Extract statements',
     options: [
       { key: 'pages', label: 'Pages (blank = auto)', type: 'text', placeholder: '1-12' },
+      { key: 'password', label: 'PDF password (if encrypted)', type: 'password' },
+      { key: 'useLlm', label: 'Use cloud LLM to refine (sends extracted text, not the PDF bytes)', type: 'checkbox' }
+    ]
+  },
+  {
+    id: 'extract-mpesa',
+    title: 'M-PESA extract',
+    tagline: 'Receipt, time, details, Paid In, Withdrawn, and Balance from Safaricom statements.',
+    description:
+      'Dedicated M-PESA parser: receipt numbers, MSISDN, paybill / till / send-money / Fuliza / airtime. Line-by-line even when Tabula/Java is not installed. Optional LLM refine.',
+    color: '#00a651',
+    group: 'ai',
+    accept: pdf,
+    acceptLabel: 'M-PESA statement PDFs',
+    minFiles: 1,
+    action: 'Extract M-PESA',
+    options: [
+      { key: 'pages', label: 'Pages (blank = auto)', type: 'text', placeholder: '1-20' },
+      { key: 'password', label: 'PDF password (if encrypted)', type: 'password' },
       { key: 'useLlm', label: 'Use cloud LLM to refine (sends extracted text, not the PDF bytes)', type: 'checkbox' }
     ]
   },
@@ -685,7 +716,38 @@ export const TOOLS: ToolDef[] = [
     action: 'Extract invoices',
     options: [
       { key: 'pages', label: 'Pages (blank = auto)', type: 'text', placeholder: '1-5' },
+      { key: 'password', label: 'PDF password (if encrypted)', type: 'password' },
       { key: 'useLlm', label: 'Use cloud LLM to refine (sends extracted text, not the PDF bytes)', type: 'checkbox' }
+    ]
+  },
+  {
+    id: 'extract-anything',
+    title: 'Extract anything',
+    tagline: 'Pull any fields you name — schema JSON or a plain-English request — from any document.',
+    description:
+      'Local entities (emails, phones, IBANs, dates, amounts, labelled fields) always run. Paste a JSON schema or write “all M-PESA receipts and the closing balance”. Tick Use cloud LLM to fill a custom schema from extracted text (Reducto Extract-style, on this machine).',
+    color: '#6b4eff',
+    group: 'ai',
+    accept: pdf,
+    acceptLabel: 'PDF documents',
+    minFiles: 1,
+    action: 'Extract anything',
+    options: [
+      {
+        key: 'query',
+        label: 'What to extract (plain English)',
+        type: 'textarea',
+        placeholder: 'All M-PESA receipts, paid in, withdrawn, and the closing balance'
+      },
+      {
+        key: 'schema',
+        label: 'JSON schema or field list (optional)',
+        type: 'textarea',
+        placeholder: '{"customer_name":"","msisdn":"","closing_balance":null}'
+      },
+      { key: 'pages', label: 'Pages (blank = auto)', type: 'text', placeholder: '1-20' },
+      { key: 'password', label: 'PDF password (if encrypted)', type: 'password' },
+      { key: 'useLlm', label: 'Use cloud LLM to fill the schema (sends extracted text, not the PDF)', type: 'checkbox' }
     ]
   },
   {

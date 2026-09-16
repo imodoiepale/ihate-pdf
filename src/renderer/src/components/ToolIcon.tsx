@@ -48,8 +48,12 @@ function glyph(id: ToolId): ReactNode {
       return <SearchIcon />
     case 'extract-bank':
       return <BankIcon />
+    case 'extract-mpesa':
+      return <MpesaIcon />
     case 'extract-invoice':
       return <InvoiceIcon />
+    case 'extract-anything':
+      return <AnythingIcon />
     case 'ask-pdf':
       return <ChatIcon />
     case 'summarize-pdf':
@@ -319,6 +323,25 @@ function BankIcon() {
     <g {...stroke}>
       <path d="M16 7l10 5H6z" />
       <path d="M8 14v7M13 14v7M19 14v7M24 14v7M7 22h18" />
+    </g>
+  )
+}
+
+function MpesaIcon() {
+  return (
+    <g {...stroke}>
+      <rect x="7" y="8" width="18" height="16" rx="2" />
+      <path d="M10 13h12M10 17h8" />
+      <circle cx="22" cy="20" r="1.4" fill="#fff" stroke="none" />
+    </g>
+  )
+}
+
+function AnythingIcon() {
+  return (
+    <g {...stroke}>
+      <circle cx="16" cy="16" r="8" />
+      <path d="M16 10v12M10 16h12" />
     </g>
   )
 }

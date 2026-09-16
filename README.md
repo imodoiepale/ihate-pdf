@@ -51,8 +51,9 @@ Browser PDF sites hit three walls: upload limits, storage quotas, and RAM. LoveP
 | Compress / PDF/A / repair | `qpdf` streams; Ghostscript only when you ask for a rewrite |
 | Office ↔ PDF | Local LibreOffice |
 | JPG / scans → PDF | `img2pdf` without decoding a giant bitmap |
-| Analyze in ~2s | [Microsoft MarkItDown](https://github.com/microsoft/markitdown) when installed, else `pdftotext` |
-| Bank & invoice extract | Local tables + regex; optional LLM refine of **extracted text only** |
+| Analyze in well under 2 s | [PyMuPDF](https://github.com/pymupdf/PyMuPDF) by default (often tens of milliseconds); [MarkItDown](https://github.com/microsoft/markitdown) for markdown; Poppler for huge files |
+| Bank, M-PESA, invoice extract | Line-by-line tables + regex; M-PESA auto-detect; optional LLM refine of **extracted text only** |
+| Extract anything | Local entities + your JSON schema or plain-English request (Reducto Extract-style, on disk) |
 | Ask / summarize / translate | On-disk chunks + your key, never the PDF bytes |
 | Huge batches | A job queue with bounded concurrency |
 
@@ -82,7 +83,7 @@ The same engine is available to Cursor, Claude Desktop, and other MCP clients.
 | HTTP JSON-RPC | Enable **Settings → MCP**, then `http://127.0.0.1:43128/mcp` |
 | stdio | `node mcp/lovepdf-mcp.mjs` (example: [`mcp/cursor-mcp.example.json`](mcp/cursor-mcp.example.json)) |
 
-Tools: `parse_pdf`, `extract_bank`, `extract_invoice`, `ask_pdf`. Paths stay on this machine. Optionally run Microsoft’s `markitdown-mcp` beside it for generic file → markdown.
+Tools: `parse_pdf`, `extract_bank`, `extract_mpesa`, `extract_invoice`, `extract_anything`, `ask_pdf`. Paths stay on this machine. Optionally run Microsoft’s `markitdown-mcp` beside it for generic file → markdown.
 
 ---
 
@@ -93,7 +94,7 @@ flowchart LR
   UI["React UI<br/>127.0.0.1:43127"] -->|fetch + SSE| Engine["LovePDF Studio engine<br/>127.0.0.1:43128"]
   MCP["MCP HTTP / stdio"] --> Engine
   Engine --> CLI["qpdf · Ghostscript · Poppler<br/>LibreOffice · img2pdf · Tesseract"]
-  Engine --> Parse["MarkItDown / pdftotext<br/>pdfplumber · pypdf"]
+  Engine --> Parse["PyMuPDF · MarkItDown · pdftotext<br/>pdfplumber · pypdf"]
   Engine --> LLM["BYO OpenRouter / OpenAI<br/>Anthropic / compatible"]
   Engine --> Disk["~/Documents/LovePDF Studio"]
 ```
@@ -110,7 +111,7 @@ Jobs are queued so a folder of hundreds of PDFs does not fork hundreds of proces
 **Convert from PDF** — JPG, Word, Excel, PowerPoint, Markdown, embedded images  
 **Edit** — Watermark, page numbers, crop / margins, add text, OCR, PDF Forms  
 **Security** — Protect, Unlock, Sign (image stamp), Redact, Compare  
-**Analyze & AI** — Analyze PDF, Bank extract, Invoice extract, Ask PDF, Summarize, Translate
+**Analyze & AI** — Analyze PDF, Bank extract, M-PESA extract, Invoice extract, Extract anything, Ask PDF, Summarize, Translate
 
 Missing binaries fail with an install hint instead of a silent stub.
 
@@ -136,7 +137,7 @@ System tools (once):
 sudo apt install qpdf poppler-utils ghostscript python3-img2pdf imagemagick \
   libreoffice-nogui python3-reportlab python3-pikepdf zip tesseract-ocr
 
-# Fast ~2s PDF → Markdown (optional, recommended)
+# Fast local parse + extract (PyMuPDF is the sub-2s engine)
 pip install --user -r resources/requirements-extract.txt
 
 # macOS
@@ -159,11 +160,42 @@ That starts:
 
 ```bash
 npm run smoke          # qpdf merge/split path
-npm run test:extract   # local bank/invoice parse
+npm run test:extract   # PyMuPDF speed + bank / M-PESA / invoice / extract-anything
 npm run mcp            # stdio MCP bridge (engine must be running)
 ```
 
 Renderer-only: `npm run dev:web` — the engine still has to be up for picking files and jobs.
+
+---
+
+## Parsers we researched (and how Studio uses them)
+
+Open **Settings → Parsers** in the app for live install status. “Razer / Extract” is [Reducto Parse + Extract](https://reducto.ai/parse) (also sometimes Azure Document Intelligence or Ragie). Studio implements the same split locally: **Parse** (Analyze PDF) and **Extract** (Bank / M-PESA / Invoice / Extract anything).
+
+| Library | Role in Studio | Speed class |
+| --- | --- | --- |
+| **[PyMuPDF](https://github.com/pymupdf/PyMuPDF)** | **Default.** Shipped when `pip install pymupdf` is present. | Sub-2 s (often 5–200 ms) |
+| **[Microsoft MarkItDown](https://github.com/microsoft/markitdown)** | Optional markdown path | ~1–3 s |
+| **[Poppler pdftotext](https://poppler.freedesktop.org/)** | Huge-file streaming fallback | Windowed, disk-safe |
+| **[pdfplumber](https://github.com/jsvine/pdfplumber)** | Bank / M-PESA tables | Fast on digital ledgers |
+| **[pypdf](https://github.com/py-pdf/pypdf)** | PDF Forms | Form fields only |
+| **[Extractous](https://github.com/yobix-ai/extractous)** | Optional “Extract” library (Rust/Tika) | Fast Office/email |
+| **[Reducto Parse + Extract](https://reducto.ai/parse)** | Cloud analogue of Analyze + Extract anything | Hosted VLM |
+| **[Azure Document Intelligence](https://learn.microsoft.com/azure/ai-services/document-intelligence/)** | Cloud; another “Razer” mishear | Cloud |
+| **[Marker 2](https://github.com/datalab-to/marker)** | Optional layout (not bundled) | Fast no-OCR CPU |
+| **[IBM Docling](https://github.com/docling-project/docling)** | Optional layout | ~0.5–3 s/page |
+| **[MinerU](https://github.com/opendatalab/MinerU)** | Optional formulas/CJK | GPU |
+| **[LlamaParse](https://github.com/run-llama/llama_parse) / LlamaExtract** | Cloud RAG + schema extract | Cloud |
+| **[Unstructured](https://github.com/Unstructured-IO/unstructured)** | Optional elements pipeline | Seconds/page |
+| **[Camelot / Tabula](https://github.com/camelot-dev/camelot)** | Classic M-PESA `mpesa2csv` stack; Java not required here | Per-page tables |
+| **[Tesseract](https://github.com/tesseract-ocr/tesseract) / OCRmyPDF** | Scans | Seconds/page |
+| **Amazon Textract / Google Document AI** | Cloud forms | Cloud |
+| **[Ragie](https://www.ragie.ai/)** | Hosted RAG | Cloud |
+| **Apache Tika** | Prefer Extractous | JVM |
+| **GROBID** | Academic PDFs | Optional |
+| **PaddleOCR / EasyOCR / Surya** | Optional OCR upgrades | GPU-friendly |
+
+Bank extract reads **every ledger line**. M-PESA extract keeps receipt, completion time, details, status, Paid In, Withdrawn, and Balance. Extract anything accepts a JSON schema or a sentence like “all till numbers and the closing balance”, and can refine with your LLM key without uploading the PDF.
 
 ---
 

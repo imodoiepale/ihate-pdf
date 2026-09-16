@@ -4,10 +4,13 @@ import { readFile, readdir, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import type { JobRequest, JobResult } from '@shared/types'
 import type { JobProgress } from '@shared/types'
+import { PARSER_LIBRARIES, mergeLibraryStatus, type LibraryRuntime } from '@shared/libraries'
 import { defaultTmp } from './paths'
 import { ensureDir, parseRanges, rmQuiet, run, uniquePath, whichSync } from './run'
-import { BANK_SCHEMA, INVOICE_SCHEMA, chat, parseJsonLoose } from './llm'
+import { BANK_SCHEMA, INVOICE_SCHEMA, MPESA_SCHEMA, anythingSchema, chat, parseJsonLoose } from './llm'
 import { resolveLlm } from './preferences'
+
+export type ExtractKind = 'bank' | 'invoice' | 'mpesa' | 'anything'
 
 type Emit = (p: JobProgress) => void
 
@@ -28,10 +31,40 @@ export async function extractEngines(): Promise<Record<string, boolean | string>
   } catch {
     return {
       pdftotext: Boolean(whichSync('pdftotext')),
+      pymupdf: false,
       markitdown: false,
       pdfplumber: false,
       defaultParser: whichSync('pdftotext') ? 'pdftotext' : 'none'
     }
+  }
+}
+
+export async function libraryCatalog(): Promise<{
+  engines: Record<string, boolean | string>
+  libraries: LibraryRuntime[]
+  catalog: typeof PARSER_LIBRARIES
+  defaultParser: string
+}> {
+  const engines = await extractEngines()
+  return {
+    engines,
+    libraries: mergeLibraryStatus(engines),
+    catalog: PARSER_LIBRARIES,
+    defaultParser: String(engines.defaultParser || 'none')
+  }
+}
+
+async function decryptIfNeeded(pdf: string, password: string): Promise<{ path: string; tmp?: string }> {
+  if (!password) return { path: pdf }
+  const qpdf = whichSync('qpdf')
+  if (!qpdf) return { path: pdf }
+  const dest = join(defaultTmp(), `unlock-${randomUUID()}.pdf`)
+  try {
+    await run(qpdf, [`--password=${password}`, '--decrypt', pdf, dest], { timeoutMs: 120_000 })
+    return { path: dest, tmp: dest }
+  } catch {
+    await rmQuiet(dest)
+    return { path: pdf }
   }
 }
 
@@ -70,22 +103,52 @@ export async function parseToDisk(
   options: JobRequest['options']
 ): Promise<ParseMeta> {
   await ensureDir(destDir)
-  const args = [extractPy(), 'parse', '--inp', pdf, '--out-dir', destDir]
-  const pages = optStr(options, 'pages')
-  if (pages) args.push('--pages', pages)
-  if (truthy(options, 'entire')) args.push('--entire')
-  const engine = optStr(options, 'engine', 'auto')
-  if (engine) args.push('--engine', engine)
-  const lang = optStr(options, 'lang', 'eng')
-  if (lang) args.push('--lang', lang)
-  const { stdout } = await run(py(), args, { timeoutMs: 10 * 60_000 })
-  const line = stdout.trim().split('\n').filter(Boolean).pop() || '{}'
-  return JSON.parse(line) as ParseMeta
+  const password = optStr(options, 'password')
+  const unlocked = await decryptIfNeeded(pdf, password)
+  try {
+    const args = [extractPy(), 'parse', '--inp', unlocked.path, '--out-dir', destDir]
+    const pages = optStr(options, 'pages')
+    if (pages) args.push('--pages', pages)
+    if (truthy(options, 'entire')) args.push('--entire')
+    const engine = optStr(options, 'engine', 'auto')
+    if (engine) args.push('--engine', engine)
+    const lang = optStr(options, 'lang', 'eng')
+    if (lang) args.push('--lang', lang)
+    const { stdout } = await run(py(), args, { timeoutMs: 10 * 60_000 })
+    const line = stdout.trim().split('\n').filter(Boolean).pop() || '{}'
+    return JSON.parse(line) as ParseMeta
+  } finally {
+    if (unlocked.tmp) await rmQuiet(unlocked.tmp)
+  }
 }
 
-async function localExtract(kind: 'bank' | 'invoice', parsedDir: string, outJson: string): Promise<Record<string, unknown>> {
-  const cmd = kind === 'bank' ? 'extract-bank' : 'extract-invoice'
-  await run(py(), [extractPy(), cmd, '--parsed-dir', parsedDir, '--out', outJson], { timeoutMs: 60_000 })
+function extractCmd(kind: ExtractKind): string {
+  if (kind === 'invoice') return 'extract-invoice'
+  if (kind === 'mpesa') return 'extract-mpesa'
+  if (kind === 'anything') return 'extract-anything'
+  return 'extract-bank'
+}
+
+async function localExtract(
+  kind: ExtractKind,
+  parsedDir: string,
+  outJson: string,
+  options: JobRequest['options']
+): Promise<Record<string, unknown>> {
+  const args = [extractPy(), extractCmd(kind), '--parsed-dir', parsedDir, '--out', outJson]
+  if (kind === 'anything') {
+    const query = optStr(options, 'query')
+    if (query) args.push('--query', query)
+    const schema = optStr(options, 'schema')
+    if (schema.trim()) {
+      const schemaPath = join(parsedDir, 'user-schema.json')
+      const trimmed = schema.trim()
+      const payload = trimmed.startsWith('{') || trimmed.startsWith('[') ? trimmed : JSON.stringify({ instruction: trimmed })
+      await writeFile(schemaPath, payload)
+      args.push('--schema', schemaPath)
+    }
+  }
+  await run(py(), args, { timeoutMs: 60_000 })
   return readJson<Record<string, unknown>>(outJson)
 }
 
@@ -95,32 +158,47 @@ function layoutSnippet(parsedDir: string, max = 14_000): Promise<string> {
     .catch(() => '')
 }
 
+function schemaFor(kind: ExtractKind, userSchema?: string): string {
+  if (kind === 'invoice') return INVOICE_SCHEMA
+  if (kind === 'mpesa') return MPESA_SCHEMA
+  if (kind === 'anything') return anythingSchema(userSchema)
+  return BANK_SCHEMA
+}
+
+function kindLabel(kind: ExtractKind): string {
+  if (kind === 'invoice') return 'invoices and receipts'
+  if (kind === 'mpesa') return 'Safaricom M-PESA statements'
+  if (kind === 'anything') return 'arbitrary documents — extract every field the user asked for'
+  return 'bank statements (line by line)'
+}
+
 async function llmRefine(
-  kind: 'bank' | 'invoice',
+  kind: ExtractKind,
   fileName: string,
   local: Record<string, unknown>,
   parsedDir: string,
-  provider?: string
+  provider: string | undefined,
+  userSchema?: string
 ): Promise<Record<string, unknown>> {
-  const schema = kind === 'bank' ? BANK_SCHEMA : INVOICE_SCHEMA
+  const schema = schemaFor(kind, userSchema)
   const text = await layoutSnippet(parsedDir)
   const { text: raw } = await chat(
     [
       {
         role: 'system',
         content:
-          `You extract structured data from ${kind === 'bank' ? 'bank statements' : 'invoices and receipts'}. ` +
+          `You extract structured data from ${kindLabel(kind)}. ` +
           `Return JSON matching this schema:\n${schema}\n` +
           `Use the local parse as a starting point. Fix missing fields when the text supports them. ` +
-          `Do not invent amounts. Numbers must come from the document.`
+          `Do not invent amounts. Numbers must come from the document. Keep every ledger line.`
       },
       {
         role: 'user',
         content:
-          `File: ${fileName}\nLocal parse JSON:\n${JSON.stringify(local).slice(0, 10_000)}\n\nDocument text:\n${text}`
+          `File: ${fileName}\nLocal parse JSON:\n${JSON.stringify(local).slice(0, 12_000)}\n\nDocument text:\n${text}`
       }
     ],
-    { provider, json: true, maxTokens: 2500 }
+    { provider, json: true, maxTokens: kind === 'anything' ? 3500 : 2500 }
   )
   const parsed = parseJsonLoose(raw)
   if (!parsed || typeof parsed !== 'object') return local
@@ -137,9 +215,11 @@ function csvEscape(v: unknown): string {
 function bankRows(docs: Array<Record<string, unknown>>): string {
   const header = [
     'file',
+    'statement_kind',
     'account_number',
     'institution',
     'date',
+    'receipt',
     'description',
     'debit',
     'credit',
@@ -154,9 +234,11 @@ function bankRows(docs: Array<Record<string, unknown>>): string {
       lines.push(
         [
           d.file,
-          d.account_number,
+          d.statement_kind || 'bank',
+          d.account_number || d.msisdn,
           d.institution,
           t.date,
+          t.receipt,
           t.description,
           t.debit,
           t.credit,
@@ -166,6 +248,80 @@ function bankRows(docs: Array<Record<string, unknown>>): string {
           .map(csvEscape)
           .join(',')
       )
+    }
+  }
+  return lines.join('\n') + '\n'
+}
+
+function mpesaRows(docs: Array<Record<string, unknown>>): string {
+  const header = [
+    'file',
+    'msisdn',
+    'account_name',
+    'date',
+    'receipt',
+    'type',
+    'details',
+    'status',
+    'paid_in',
+    'withdrawn',
+    'balance',
+    'counterparty_phone'
+  ]
+  const lines = [header.join(',')]
+  for (const d of docs) {
+    const tx = Array.isArray(d.transactions) && d.transactions.length ? d.transactions : d.mpesa_rows
+    const rows = Array.isArray(tx) && tx.length ? tx : [{}]
+    for (const t of rows as Array<Record<string, unknown>>) {
+      lines.push(
+        [
+          d.file,
+          d.msisdn || d.account_number,
+          d.account_name,
+          t.date,
+          t.receipt,
+          t.type,
+          t.details || t.description,
+          t.status,
+          t.paid_in || t.credit,
+          t.withdrawn || t.debit,
+          t.balance,
+          t.counterparty_phone
+        ]
+          .map(csvEscape)
+          .join(',')
+      )
+    }
+  }
+  return lines.join('\n') + '\n'
+}
+
+function anythingRows(docs: Array<Record<string, unknown>>): string {
+  const header = ['file', 'detected_kind', 'kind', 'key', 'value']
+  const lines = [header.join(',')]
+  for (const d of docs) {
+    const fields = d.fields && typeof d.fields === 'object' && !Array.isArray(d.fields) ? d.fields : {}
+    for (const [k, v] of Object.entries(fields as Record<string, unknown>)) {
+      lines.push([d.file, d.detected_kind, 'field', k, v].map(csvEscape).join(','))
+    }
+    const entities = (d.entities || {}) as Record<string, unknown>
+    for (const [group, values] of Object.entries(entities)) {
+      if (group === 'fields' || group === 'matched_lines' || group === 'amounts') continue
+      if (Array.isArray(values)) {
+        for (const v of values) {
+          lines.push([d.file, d.detected_kind, group, '', v].map(csvEscape).join(','))
+        }
+      }
+    }
+    if (Array.isArray(entities.amounts)) {
+      for (const a of entities.amounts as Array<Record<string, unknown>>) {
+        lines.push([d.file, d.detected_kind, 'amount', a.raw, a.value].map(csvEscape).join(','))
+      }
+    }
+    if (Array.isArray(entities.matched_lines)) {
+      for (const line of entities.matched_lines as unknown[]) {
+        lines.push([d.file, d.detected_kind, 'matched_line', '', line].map(csvEscape).join(','))
+      }
     }
   }
   return lines.join('\n') + '\n'
@@ -281,14 +437,43 @@ export async function runParseJob(job: JobRequest, destRoot: string, cb: Emit): 
   }
 }
 
+function csvFor(kind: ExtractKind, docs: Array<Record<string, unknown>>): string {
+  if (kind === 'invoice') return invoiceRows(docs)
+  if (kind === 'mpesa') return mpesaRows(docs)
+  if (kind === 'anything') return anythingRows(docs)
+  return bankRows(docs)
+}
+
+function countRows(kind: ExtractKind, docs: Array<Record<string, unknown>>): number {
+  if (kind === 'invoice') {
+    return docs.reduce((n, d) => n + (Array.isArray(d.line_items) ? d.line_items.length : 0), 0)
+  }
+  if (kind === 'anything') {
+    return docs.reduce((n, d) => {
+      const fields = d.fields && typeof d.fields === 'object' ? Object.keys(d.fields as object).length : 0
+      const ents = d.entities as { emails?: unknown[]; phones?: unknown[] } | undefined
+      return n + fields + (ents?.emails?.length || 0) + (ents?.phones?.length || 0)
+    }, 0)
+  }
+  return docs.reduce((n, d) => n + (Array.isArray(d.transactions) ? d.transactions.length : 0), 0)
+}
+
+function combinedName(kind: ExtractKind): { json: string; csv: string } {
+  if (kind === 'invoice') return { json: 'invoices.json', csv: 'invoices.csv' }
+  if (kind === 'mpesa') return { json: 'mpesa-statements.json', csv: 'mpesa-statements.csv' }
+  if (kind === 'anything') return { json: 'extracted.json', csv: 'extracted.csv' }
+  return { json: 'statements.json', csv: 'statements.csv' }
+}
+
 export async function runStructuredExtract(
-  kind: 'bank' | 'invoice',
+  kind: ExtractKind,
   job: JobRequest,
   destRoot: string,
   cb: Emit
 ): Promise<JobResult> {
   const useLlm = truthy(job.options, 'useLlm')
   const provider = optStr(job.options, 'provider') || undefined
+  const userSchema = optStr(job.options, 'schema')
   if (useLlm && !resolveLlm(provider)) {
     cb({
       jobId: job.id,
@@ -316,11 +501,11 @@ export async function runStructuredExtract(
       const parsedDir = join(tmpRoot, basename(f.name, extname(f.name)) + '-' + randomUUID().slice(0, 8))
       await parseToDisk(f.path, parsedDir, job.options)
       const localPath = join(parsedDir, `${kind}.json`)
-      let doc = await localExtract(kind, parsedDir, localPath)
+      let doc = await localExtract(kind, parsedDir, localPath, job.options)
       doc.file = f.name
       if (useLlm && resolveLlm(provider)) {
         try {
-          doc = await llmRefine(kind, f.name, doc, parsedDir, provider)
+          doc = await llmRefine(kind, f.name, doc, parsedDir, provider, userSchema)
         } catch (e) {
           doc.llm_error = e instanceof Error ? e.message : String(e)
         }
@@ -344,18 +529,16 @@ export async function runStructuredExtract(
     )
   }
 
-  const combined = await uniquePath(join(destRoot, kind === 'bank' ? 'statements.json' : 'invoices.json'))
+  const names = combinedName(kind)
+  const combined = await uniquePath(join(destRoot, names.json))
   await writeFile(combined, JSON.stringify({ documents: docs, failures }, null, 2) + '\n')
   outputs.unshift(await resultFile(combined))
 
-  const csvPath = await uniquePath(join(destRoot, kind === 'bank' ? 'statements.csv' : 'invoices.csv'))
-  await writeFile(csvPath, kind === 'bank' ? bankRows(docs) : invoiceRows(docs))
+  const csvPath = await uniquePath(join(destRoot, names.csv))
+  await writeFile(csvPath, csvFor(kind, docs))
   outputs.unshift(await resultFile(csvPath))
 
-  const txCount =
-    kind === 'bank'
-      ? docs.reduce((n, d) => n + (Array.isArray(d.transactions) ? d.transactions.length : 0), 0)
-      : docs.reduce((n, d) => n + (Array.isArray(d.line_items) ? d.line_items.length : 0), 0)
+  const txCount = countRows(kind, docs)
 
   return {
     jobId: job.id,

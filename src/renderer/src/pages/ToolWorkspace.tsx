@@ -29,7 +29,8 @@ const defaults: Record<string, string> = {
   opacity: '25',
   start: '1',
   marginMm: '12',
-  target: 'en'
+  target: 'en',
+  engine: 'auto'
 }
 
 export function ToolWorkspace() {
@@ -145,8 +146,14 @@ export function ToolWorkspace() {
     }
     if (tool.id === 'pdf-to-jpg') return need('pdftoppm', 'Poppler is not installed. Linux: sudo apt install poppler-utils')
     if (tool.id === 'pdf-to-pdfa') return need('gs', 'Ghostscript is not installed. Linux: sudo apt install ghostscript')
-    if (['parse-pdf', 'extract-bank', 'extract-invoice', 'ask-pdf', 'summarize-pdf', 'translate-pdf'].includes(tool.id)) {
-      return need('pdftotext', 'pdftotext is not installed. Analyze/extract needs poppler-utils. Linux: sudo apt install poppler-utils')
+    if (
+      ['parse-pdf', 'extract-bank', 'extract-mpesa', 'extract-invoice', 'extract-anything', 'ask-pdf', 'summarize-pdf', 'translate-pdf'].includes(
+        tool.id
+      )
+    ) {
+      const poppler = need('pdftotext', 'pdftotext is not installed. Analyze/extract needs poppler-utils. Linux: sudo apt install poppler-utils')
+      if (status.extract?.pymupdf) return null
+      return poppler
     }
     if (tool.id === 'extract-images') {
       return need('pdfimages', 'pdfimages is not installed. Linux: sudo apt install poppler-utils')

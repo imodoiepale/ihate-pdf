@@ -962,8 +962,12 @@ export async function runJob(job: JobRequest, cb: Emit): Promise<JobResult> {
       return runParseJob(job, destRoot, cb)
     case 'extract-bank':
       return runStructuredExtract('bank', job, destRoot, cb)
+    case 'extract-mpesa':
+      return runStructuredExtract('mpesa', job, destRoot, cb)
     case 'extract-invoice':
       return runStructuredExtract('invoice', job, destRoot, cb)
+    case 'extract-anything':
+      return runStructuredExtract('anything', job, destRoot, cb)
     case 'ask-pdf':
       return runAskIndexJob(job, destRoot, cb)
     case 'summarize-pdf':

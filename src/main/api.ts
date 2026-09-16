@@ -9,7 +9,7 @@ import type { LlmProviderId } from '@shared/preferences'
 import { API_PORT, type EngineStatus, type FileRef, type JobRequest, type JobResult } from '@shared/types'
 import { detectBinaries, engineStatus } from './pdfinfo'
 import { defaultOutputDir, defaultTmp, inspectFile, makeFileRef, runJob } from './jobs'
-import { askParsed, extractEngines } from './extract'
+import { askParsed, extractEngines, libraryCatalog } from './extract'
 import {
   applyPreferencePatch,
   isMcpEnabled,
@@ -159,6 +159,10 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     }
     if (req.method === 'GET' && url.pathname === '/api/bins') {
       send(res, 200, detectBinaries())
+      return
+    }
+    if (req.method === 'GET' && url.pathname === '/api/libraries') {
+      send(res, 200, await libraryCatalog())
       return
     }
     if (req.method === 'POST' && url.pathname === '/api/settings') {

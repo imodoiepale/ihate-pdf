@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { LLM_PROVIDERS, PROVIDER_META, type LlmProviderId, type StudioPreferencesPublic } from '@shared/preferences'
+import type { LibraryRuntime } from '@shared/libraries'
 import { apiGet, apiPost } from '../lib/api'
 
-type Tab = 'workspace' | 'providers' | 'mcp' | 'about'
+type Tab = 'workspace' | 'providers' | 'parsers' | 'mcp' | 'about'
 
 export function SettingsPage() {
   const [tab, setTab] = useState<Tab>('providers')
@@ -48,6 +49,7 @@ export function SettingsPage() {
           {(
             [
               ['providers', 'API keys'],
+              ['parsers', 'Parsers'],
               ['workspace', 'Workspace'],
               ['mcp', 'MCP'],
               ['about', 'About']
@@ -115,6 +117,8 @@ export function SettingsPage() {
         {!loading && prefs && tab === 'workspace' && (
           <WorkspacePanel prefs={prefs} onPatch={patch} />
         )}
+
+        {tab === 'parsers' && <ParsersPanel />}
 
         {!loading && prefs && tab === 'mcp' && <McpPanel prefs={prefs} onPatch={patch} />}
 
@@ -352,9 +356,10 @@ function McpPanel({
       <p className="text-[13.5px] leading-relaxed text-[#5c5c66]">
         Cursor and other MCP clients can call the same local engine. Two options: HTTP JSON-RPC at{' '}
         <code className="font-mono">{prefs.mcp.url}</code>, or the stdio server{' '}
-        <code className="font-mono">node mcp/lovepdf-mcp.mjs</code>. Tools: parse_pdf, extract_bank, extract_invoice,
-        ask_pdf. We wrap the engine rather than inventing a competing protocol; Microsoft MarkItDown also ships{' '}
-        <code className="font-mono">markitdown-mcp</code> if you want the generic converter.
+        <code className="font-mono">node mcp/lovepdf-mcp.mjs</code>. Tools: parse_pdf, extract_bank, extract_mpesa,
+        extract_invoice, extract_anything, ask_pdf. We wrap the engine rather than inventing a competing protocol;
+        Microsoft MarkItDown also ships <code className="font-mono">markitdown-mcp</code> if you want the generic
+        converter.
       </p>
       <div className="surface p-5">
         <label className="flex items-center justify-between gap-4">
@@ -396,12 +401,102 @@ function AboutPanel() {
           by, or a substitute name for iLovePDF.
         </p>
         <p className="mt-3">
-          Processing runs on your disk through qpdf, Ghostscript, Poppler, LibreOffice, img2pdf, and Tesseract.
-          Optional AI features use keys you provide — OpenRouter, OpenAI, Anthropic, or an OpenAI-compatible
-          endpoint.
+          Processing runs on your disk through qpdf, Ghostscript, Poppler, LibreOffice, img2pdf, Tesseract, and
+          PyMuPDF. Optional AI features use keys you provide — OpenRouter, OpenAI, Anthropic, or an
+          OpenAI-compatible endpoint. See <span className="font-semibold">Settings → Parsers</span> for the full
+          research list (PyMuPDF, MarkItDown, Reducto Parse+Extract, Extractous, Docling, Marker, MinerU, and more).
         </p>
         <p className="mt-3 text-[13px] text-ilp-muted">Version 1.0.0 · MIT License · James Epale</p>
       </div>
+    </div>
+  )
+}
+
+const KIND_LABEL: Record<string, string> = {
+  'local-fast': 'Fast local (sub-2 s class)',
+  'local-tables': 'Tables / ledgers',
+  'local-ocr': 'OCR',
+  'local-layout': 'Layout models (optional)',
+  'cloud-extract': 'Cloud extract (not uploaded by default)',
+  'schema-llm': 'Schema extract'
+}
+
+function statusChip(lib: LibraryRuntime) {
+  if (lib.activeDefault) return { label: 'Default', className: 'bg-emerald-50 text-emerald-800' }
+  if (lib.installed) return { label: 'Installed', className: 'bg-emerald-50 text-emerald-800' }
+  if (lib.status === 'shipped') return { label: 'Shipped', className: 'bg-[#fff3f2] text-ilp-red' }
+  if (lib.status === 'cloud') return { label: 'Cloud', className: 'bg-[#f6f6f8] text-ilp-muted' }
+  return { label: 'Optional', className: 'bg-[#f6f6f8] text-ilp-muted' }
+}
+
+function ParsersPanel() {
+  const [libs, setLibs] = useState<LibraryRuntime[] | null>(null)
+  const [defaultParser, setDefaultParser] = useState<string>('')
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    apiGet<{ libraries: LibraryRuntime[]; defaultParser: string }>('/api/libraries')
+      .then((data) => {
+        setLibs(data.libraries)
+        setDefaultParser(data.defaultParser)
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Could not load parser catalog'))
+  }, [])
+
+  return (
+    <div className="space-y-4">
+      <header>
+        <h2 className="text-[18px] font-extrabold tracking-tight text-ilp-dark">Parsers we researched</h2>
+        <p className="mt-1 text-[13.5px] leading-relaxed text-[#5c5c66]">
+          The sub-2-second path is <span className="font-semibold">PyMuPDF</span>
+          {defaultParser ? ` (active default: ${defaultParser})` : ''}. “Razer / Extract” maps to{' '}
+          <span className="font-semibold">Reducto Parse + Extract</span> (cloud) and locally to Analyze PDF + Extract
+          anything. We detect optional libraries if you install them; we do not download multi-gigabyte models.
+        </p>
+      </header>
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+      {!libs && !error && (
+        <div className="surface p-8">
+          <div className="h-4 w-40 animate-pulse rounded bg-[#ececef]" />
+          <div className="mt-4 h-24 animate-pulse rounded-xl bg-[#f6f6f8]" />
+        </div>
+      )}
+      {libs?.map((lib) => {
+        const chip = statusChip(lib)
+        return (
+          <article key={lib.id} className="surface overflow-hidden">
+            <div className="p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-ilp-muted">
+                    {KIND_LABEL[lib.kind] || lib.kind}
+                  </p>
+                  <h3 className="mt-1 text-[15px] font-bold text-ilp-dark">{lib.name}</h3>
+                </div>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${chip.className}`}>
+                  {chip.label}
+                </span>
+              </div>
+              <p className="mt-2 text-[13px] leading-relaxed text-[#5c5c66]">{lib.what}</p>
+              <p className="mt-2 text-[12.5px] leading-relaxed text-ilp-muted">
+                <span className="font-semibold text-ilp-dark">Speed: </span>
+                {lib.speed}
+              </p>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-ilp-muted">{lib.notes}</p>
+              <a
+                className="mt-3 inline-block text-[12.5px] font-semibold text-ilp-red hover:underline"
+                href={lib.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {lib.url.replace(/^https?:\/\//, '')}
+              </a>
+            </div>
+          </article>
+        )
+      })}
     </div>
   )
 }

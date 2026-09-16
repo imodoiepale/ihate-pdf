@@ -196,3 +196,53 @@ export const INVOICE_SCHEMA = `{
     { "description": "string", "qty": "number|null", "unit_price": "number|null", "amount": "number|null" }
   ]
 }`
+
+export const MPESA_SCHEMA = `{
+  "file": "string",
+  "statement_kind": "mpesa",
+  "institution": "Safaricom M-PESA",
+  "account_name": "string|null",
+  "msisdn": "string|null",
+  "email": "string|null",
+  "period_start": "string|null",
+  "period_end": "string|null",
+  "currency": "KES",
+  "paid_in_total": "number|null",
+  "withdrawn_total": "number|null",
+  "closing_balance": "number|null",
+  "transactions": [
+    {
+      "date": "string",
+      "receipt": "string",
+      "description": "string",
+      "type": "send_money|paybill|buy_goods|withdrawal|airtime|fuliza|charge|deposit|other",
+      "paid_in": "number|null",
+      "withdrawn": "number|null",
+      "debit": "number|null",
+      "credit": "number|null",
+      "amount": "number|null",
+      "balance": "number|null",
+      "status": "string|null",
+      "counterparty_phone": "string|null"
+    }
+  ]
+}`
+
+export function anythingSchema(userSchema?: string): string {
+  const extra = userSchema?.trim()
+    ? `\nThe user also supplied this target schema or instruction. Fill it. Do not invent amounts.\n${userSchema.trim()}\n`
+    : ''
+  return `{
+  "file": "string",
+  "detected_kind": "bank|mpesa|invoice|generic",
+  "fields": { "any_label": "value" },
+  "entities": {
+    "emails": ["string"],
+    "phones": ["string"],
+    "dates": ["string"],
+    "amounts": [{ "raw": "string", "value": "number" }],
+    "ibans": ["string"],
+    "matched_lines": ["string"]
+  }
+}${extra}`
+}
