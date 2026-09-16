@@ -1,25 +1,147 @@
-# LovePDF Desktop (LovePDF Studio)
+<p align="center">
+  <img src="docs/screenshots/studio-window.jpg" alt="LovePDF Studio desktop window" width="920" />
+</p>
 
-A local-first desktop PDF toolbox with an iLovePDF-style interface. Merge, split, compress, convert, crop, watermark, protect, **analyze**, and batch-extract documents **on this computer**. Nothing is uploaded unless you explicitly tick **Use cloud LLM** on an extract/translate job. There is no account, no cloud quota, and no artificial file-size or file-count cap.
+<h1 align="center">LovePDF Studio</h1>
 
-## Why this exists
+<p align="center">
+  <strong>A local-first desktop PDF studio.</strong><br />
+  Merge, split, compress, convert, crop, protect, analyze, and batch-extract — on this computer.
+</p>
 
-Browser PDF sites hit three walls: upload limits, storage quotas, and RAM. LovePDF Desktop keeps every file on disk and shells out to streaming CLI tools (`qpdf`, Poppler, Ghostscript, LibreOffice, img2pdf). A 1 TB PDF is limited by **free disk space and time**, not by the JavaScript heap.
+<p align="center">
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-e42722" />
+  <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-1c1c24" />
+  <img alt="Local-first" src="https://img.shields.io/badge/files-stay%20on%20disk-e42722" />
+  <img alt="BYO LLM" src="https://img.shields.io/badge/LLM-bring%20your%20own%20keys-6b4eff" />
+  <img alt="MCP" src="https://img.shields.io/badge/MCP-HTTP%20%2B%20stdio-10a37f" />
+  <img alt="No upload cap" src="https://img.shields.io/badge/file%20size-disk%20limited-f4a025" />
+</p>
 
-## How to run
+LovePDF Studio is an independent, open-source Electron app. Nothing is uploaded unless you explicitly tick **Use cloud LLM** on an extract, summarize, ask, or translate job. There is no account, no quota, and no artificial file-size or file-count cap. A 1&nbsp;TB PDF is limited by **free disk and time**, not by a browser heap.
 
-System tools (install once):
+It is **not affiliated with iLovePDF**.
+
+---
+
+## Screenshots
+
+| Home | Settings · BYO keys |
+| --- | --- |
+| <img src="docs/screenshots/home.png" alt="Home tool grid" /> | <img src="docs/screenshots/settings.png" alt="API key settings" /> |
+
+| Merge empty state | Analyze PDF |
+| --- | --- |
+| <img src="docs/screenshots/merge.png" alt="Merge PDF drop zone" /> | <img src="docs/screenshots/analyze.png" alt="Analyze PDF workspace" /> |
+
+<p align="center">
+  <img src="docs/screenshots/home-narrow.png" alt="LovePDF Studio in a smaller window" width="520" />
+  <br /><em>The same chrome, tightened for a smaller desktop window.</em>
+</p>
+
+---
+
+## Why a desktop studio
+
+Browser PDF sites hit three walls: upload limits, storage quotas, and RAM. LovePDF Studio keeps every file on disk and shells out to streaming CLI tools (`qpdf`, Poppler, Ghostscript, LibreOffice, img2pdf, Tesseract). The renderer sends **paths**, not bytes.
+
+| You get | How |
+| --- | --- |
+| Merge / split / organize / rotate | `qpdf` page tree — does not load the document into Node |
+| Compress / PDF/A / repair | `qpdf` streams; Ghostscript only when you ask for a rewrite |
+| Office ↔ PDF | Local LibreOffice |
+| JPG / scans → PDF | `img2pdf` without decoding a giant bitmap |
+| Analyze in ~2s | [Microsoft MarkItDown](https://github.com/microsoft/markitdown) when installed, else `pdftotext` |
+| Bank & invoice extract | Local tables + regex; optional LLM refine of **extracted text only** |
+| Ask / summarize / translate | On-disk chunks + your key, never the PDF bytes |
+| Huge batches | A job queue with bounded concurrency |
+
+---
+
+## Bring your own LLM keys
+
+Open **Settings → API keys** and connect any of:
+
+- **OpenRouter** — one key for GPT, Claude, Gemini, Llama, …
+- **OpenAI**
+- **Anthropic**
+- **OpenAI-compatible** — Ollama, vLLM, LM Studio, Together, Groq, Azure, or anything that speaks `/v1/chat/completions`
+
+Keys are encrypted with Electron `safeStorage` (OS keychain) when available, otherwise AES-256-GCM in a `0600` sidecar under the app user-data folder. The UI never shows a raw key after save (only `••••last4`). **Test connection** sends `ping` / `pong` — no PDF.
+
+Environment fallbacks (optional): `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `OPENAI_COMPATIBLE_BASE_URL`.
+
+---
+
+## MCP
+
+The same engine is available to Cursor, Claude Desktop, and other MCP clients.
+
+| Transport | How |
+| --- | --- |
+| HTTP JSON-RPC | Enable **Settings → MCP**, then `http://127.0.0.1:43128/mcp` |
+| stdio | `node mcp/lovepdf-mcp.mjs` (example: [`mcp/cursor-mcp.example.json`](mcp/cursor-mcp.example.json)) |
+
+Tools: `parse_pdf`, `extract_bank`, `extract_invoice`, `ask_pdf`. Paths stay on this machine. Optionally run Microsoft’s `markitdown-mcp` beside it for generic file → markdown.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  UI["React UI<br/>127.0.0.1:43127"] -->|fetch + SSE| Engine["LovePDF Studio engine<br/>127.0.0.1:43128"]
+  MCP["MCP HTTP / stdio"] --> Engine
+  Engine --> CLI["qpdf · Ghostscript · Poppler<br/>LibreOffice · img2pdf · Tesseract"]
+  Engine --> Parse["MarkItDown / pdftotext<br/>pdfplumber · pypdf"]
+  Engine --> LLM["BYO OpenRouter / OpenAI<br/>Anthropic / compatible"]
+  Engine --> Disk["~/Documents/LovePDF Studio"]
+```
+
+Jobs are queued so a folder of hundreds of PDFs does not fork hundreds of processes.
+
+---
+
+## Tools
+
+**Organize** — Merge, Split, Extract pages, Delete pages, Organize / reorder, Rotate  
+**Optimize** — Compress, Repair, PDF/A  
+**Convert to PDF** — JPG / scan, Word, Excel, PowerPoint, HTML  
+**Convert from PDF** — JPG, Word, Excel, PowerPoint, Markdown, embedded images  
+**Edit** — Watermark, page numbers, crop / margins, add text, OCR, PDF Forms  
+**Security** — Protect, Unlock, Sign (image stamp), Redact, Compare  
+**Analyze & AI** — Analyze PDF, Bank extract, Invoice extract, Ask PDF, Summarize, Translate
+
+Missing binaries fail with an install hint instead of a silent stub.
+
+---
+
+## Huge files, honestly
+
+- The renderer never reads file bytes into `Buffer` / `ArrayBuffer` for processing.
+- Analyze writes `pages/` and `chunks/` on disk. Retrieval scores those files. Default index cap is 200 pages unless you pass a range or tick “entire document”.
+- Intermediate work lives in the OS temp directory and is deleted when the job finishes.
+- Outputs land in `~/Documents/LovePDF Studio` (changeable in Settings).
+- Ghostscript (lossy compress, PDF/A) can use more RAM; files over ~2&nbsp;GB stay on the `qpdf` path when that is safer.
+- Processing a 1&nbsp;TB file still needs roughly that much **free disk** for the output.
+
+---
+
+## Run it
+
+System tools (once):
 
 ```bash
 # Debian / Ubuntu
-sudo apt install qpdf poppler-utils ghostscript python3-img2pdf imagemagick libreoffice-nogui python3-reportlab python3-pikepdf zip tesseract-ocr
+sudo apt install qpdf poppler-utils ghostscript python3-img2pdf imagemagick \
+  libreoffice-nogui python3-reportlab python3-pikepdf zip tesseract-ocr
 
-# Fast ~2s PDF → Markdown (optional but recommended)
-pip install --user 'markitdown[pdf]' pdfplumber pypdf
+# Fast ~2s PDF → Markdown (optional, recommended)
+pip install --user -r resources/requirements-extract.txt
 
 # macOS
 brew install qpdf poppler ghostscript img2pdf imagemagick
-# LibreOffice from https://www.libreoffice.org/
+# LibreOffice: https://www.libreoffice.org/
 ```
 
 Then:
@@ -31,107 +153,22 @@ npm run dev
 
 That starts:
 
-- the Vite renderer at **http://127.0.0.1:43127**
-- the local engine API at **http://127.0.0.1:43128**
-- an Electron window (use `--no-sandbox` automatically in this project)
-
-Renderer-only (UI without the desktop window):
+- Vite renderer at **http://127.0.0.1:43127**
+- Engine API at **http://127.0.0.1:43128**
+- an Electron window (`--no-sandbox` is already in the npm script)
 
 ```bash
-npm run dev:web
+npm run smoke          # qpdf merge/split path
+npm run test:extract   # local bank/invoice parse
+npm run mcp            # stdio MCP bridge (engine must be running)
 ```
 
-The engine still has to be running for file picking and jobs. Prefer `npm run dev`.
+Renderer-only: `npm run dev:web` — the engine still has to be up for picking files and jobs.
 
-Smoke-test the PDF CLI path and the local extract pipeline:
+---
 
-```bash
-npm run smoke
-npm run test:extract
-```
+## License
 
-## Tools
+[MIT](LICENSE) © James Epale
 
-Organize: Merge, Split, Extract pages, Delete pages, Organize / reorder, Rotate  
-Optimize: Compress, Repair, PDF/A  
-Convert to PDF: JPG/scan to PDF, Word, Excel, PowerPoint, HTML  
-Convert from PDF: JPG, Word, Excel, PowerPoint, Markdown, **embedded images**  
-Edit: Watermark, page numbers, crop/margins, add text, OCR (needs Tesseract), **PDF Forms**  
-Security: Protect, Unlock, Sign (image stamp), Redact, Compare  
-Analyze & AI: **Analyze PDF**, **Bank extract**, **Invoice extract**, **Ask PDF**, **Summarize**, **Translate**
-
-If a system binary is missing, the job fails with an install hint instead of a silent stub.
-
-## Fast PDF scan, MCP, and research notes
-
-**The ~2-second scanner we ship:** [microsoft/markitdown](https://github.com/microsoft/markitdown) (MIT). Independent parser benchmarks put MarkItDown around **0.3–2s** on born-digital PDFs (no GPU, no model download). That matches “the repository that scans PDFs in 2 seconds.” LovePDF uses it as the fast markdown path when `pip install 'markitdown[pdf]'` succeeded, then **always** writes page-accurate layout with Poppler `pdftotext -layout` in page windows so huge files stay on disk.
-
-**Why not the heavier OCR stacks as default?** MinerU, Marker, olmOCR, DeepSeek-OCR, dots.ocr, and PDF-Extract-Kit need large model weights and usually a GPU. Docling (IBM, MIT, official `docling-mcp`) is the best layout-aware local option if you install it, and we detect it, but it is slower and pulls models. LlamaParse / Reducto / Unstructured Cloud are hosted APIs — they would upload files, which this app refuses unless you opt into **your** LLM.
-
-**Local fallback (no MarkItDown, no API key):** `pdftotext` + optional `pdfplumber` tables + Tesseract OCR when the text layer is empty. Bank/invoice extractors then run regex + table heuristics. That path is required to work; it does.
-
-**MCP:** LovePDF exposes the same engine tools (`parse_pdf`, `extract_bank`, `extract_invoice`, `ask_pdf`) over:
-
-- HTTP JSON-RPC at `http://127.0.0.1:43128/mcp`
-- stdio: `node mcp/lovepdf-mcp.mjs` (see `mcp/cursor-mcp.example.json`)
-
-We wrap the engine rather than inventing a competing protocol. Optionally add Microsoft’s `markitdown-mcp` next to it for generic file→markdown.
-
-## API keys
-
-Settings → API keys. Connect **any** of: OpenRouter, OpenAI, Anthropic (Claude), or a generic OpenAI-compatible base URL + key (Ollama, vLLM, LM Studio, Together, Groq, Azure).
-
-- Keys are stored with Electron `safeStorage` (OS keychain) when available, otherwise AES-256-GCM in a `0600` sidecar under the app userData folder.
-- The renderer never receives the raw key after save (only `••••last4`).
-- **Default provider** is a toggle. **Test connection** sends `ping`/`pong` — no PDF.
-- Files are **not** sent to the cloud unless you tick **Use cloud LLM** on an extract, summarize, ask, or translate job. Even then, only extracted text/passages are sent, never the PDF bytes.
-
-## Bulk bank / invoice extract
-
-Drop many PDFs on **Bank extract** or **Invoice extract**. Each file is parsed locally, then structured to JSON. Failures are recorded per file; the batch continues. Combined `statements.csv` / `invoices.csv` plus per-file JSON land in your output folder. Tick **Use cloud LLM** only if you want the default provider to refine the local parse.
-
-Ask PDF indexes chunks on disk and retrieves top passages. A 1 TB file is never loaded into the model context; set a page range (or the auto cap of ~200 pages) for huge documents.
-
-## iLovePDF gaps this slice closed (locally)
-
-| iLovePDF.com | LovePDF Desktop | Honest limit |
-| --- | --- | --- |
-| Analyze / AI summarizer | Analyze + Summarize (local extractive; optional LLM) | LLM needs your key |
-| Translate PDF | Translate extracted markdown | Not a layout-preserving PDF rewrite |
-| PDF Forms | List / fill / flatten AcroForm fields | No AI field-detection on flattened scans |
-| Workflows / Smart split | Not cloned | Would be a fake without a document-type model |
-| Extract images | `pdfimages` | Missing binary → install hint |
-| Cloud OCR reconstruction | Tesseract page-by-page | Quality ≠ iLovePDF’s cloud OCR |
-
-## 1 TB / huge-file strategy (honest)
-
-- The renderer never reads file bytes into `Buffer` / `ArrayBuffer` for processing. It sends **paths**.
-- `qpdf` concatenates and splits using the page tree; it does not load all pages into Node.
-- Analyze writes `pages/NNNNN.txt` and `chunks/` on disk; retrieval scores those files. The default index cap is 200 pages unless you pass a range or tick “entire document”.
-- Intermediate work lives in the OS temp directory and is deleted when the job finishes.
-- Outputs go to `~/Documents/LovePDF Studio` (changeable per tool).
-- Ghostscript (lossy compress, PDF/A, some crop paths) can use more RAM. Files over ~2 GB stay on the qpdf path when that is safer.
-- img2pdf wraps JPEG/PNG without decoding them into a giant bitmap.
-- LibreOffice conversions are **best-effort** and need LibreOffice installed. Scanned PDFs will not become perfect Word/Excel files.
-- Page thumbnails are not generated for huge documents; use page ranges.
-- Processing a 1 TB file still needs roughly that much **free disk** for the output (and sometimes a temporary sibling). There is no magic that writes a 1 TB result onto a 200 GB disk.
-
-## Architecture
-
-```
-Electron main  →  HTTP engine on 127.0.0.1:43128  →  qpdf / gs / pdftotext / markitdown / soffice / img2pdf
-React renderer →  Vite on 127.0.0.1:43127         →  iLovePDF-like UI, IPC-free fetch + SSE progress
-MCP            →  /mcp JSON-RPC or mcp/lovepdf-mcp.mjs stdio
-```
-
-Queue: jobs run with limited concurrency so a batch of hundreds of PDFs does not fork hundreds of processes at once.
-
-## Limitations
-
-- OCR needs `tesseract-ocr`.
-- PDF → Office layout is LibreOffice’s importer, not a cloud reconstruction.
-- Image-stamp signatures are not PAdES certificates.
-- HTML-from-URL printing needs the Electron window (Chromium). Local HTML files use LibreOffice.
-- pikepdf crop walks page boxes; it is disk-backed but not instantaneous on enormous page counts.
-- Translate and cloud-refined extract need an API key; local parse still works without one.
-- MarkItDown does not OCR scans. Empty text layers fall through to Tesseract (capped page count) or an install hint.
+LovePDF Studio is independent open-source software. Not affiliated with, endorsed by, or a substitute name for iLovePDF.

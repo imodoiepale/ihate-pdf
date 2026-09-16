@@ -243,6 +243,7 @@ export async function applyPreferencePatch(patch: PreferencePatch): Promise<Stor
       if (incoming.clearKey) {
         delete vault[id]
         vaultDirty = true
+        if (next.defaultProvider === id) next.defaultProvider = null
       } else if (typeof incoming.apiKey === 'string' && incoming.apiKey.trim() && !incoming.apiKey.includes('•')) {
         vault[id] = incoming.apiKey.trim()
         vaultDirty = true

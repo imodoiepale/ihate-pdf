@@ -101,7 +101,8 @@ export function writeVault(keys: Record<string, string>): void {
 
 export function maskError(message: string): string {
   return message
-    .replace(/sk-[A-Za-z0-9_-]{6,}/g, 'sk-***')
+    .replace(/sk-[A-Za-z0-9_\-*]{4,}/g, 'sk-***')
     .replace(/Bearer\s+\S+/gi, 'Bearer ***')
     .replace(/x-api-key["']?\s*[:=]\s*["']?[^"'\s]+/gi, 'x-api-key: ***')
+    .replace(/Incorrect API key provided:[^.]+/gi, 'Incorrect API key provided: ***')
 }
