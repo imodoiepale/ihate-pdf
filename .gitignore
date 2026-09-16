@@ -8,3 +8,5 @@ dist
 agent-tools
 .vscode
 .idea
+*.tsbuildinfo
+*.tsbuildinfo
