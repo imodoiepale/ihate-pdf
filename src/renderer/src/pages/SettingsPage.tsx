@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { LLM_PROVIDERS, PROVIDER_META, type LlmProviderId, type StudioPreferencesPublic } from '@shared/preferences'
 import type { LibraryRuntime } from '@shared/libraries'
 import { apiGet, apiPost } from '../lib/api'
+import { Wordmark } from '../components/Wordmark'
 
 type Tab = 'workspace' | 'providers' | 'parsers' | 'mcp' | 'about'
 
@@ -394,7 +395,9 @@ function McpPanel({
 function AboutPanel() {
   return (
     <div className="space-y-4">
-      <h2 className="text-[18px] font-extrabold tracking-tight text-ilp-dark">About IHATE PDF</h2>
+      <h2 className="text-[18px] font-extrabold tracking-tight text-ilp-dark">
+        About <Wordmark />
+      </h2>
       <div className="surface p-5 text-[14px] leading-relaxed text-[#5c5c66]">
         <p>
           IHATE PDF is an independent, open-source desktop PDF toolbox. It is not affiliated with, endorsed

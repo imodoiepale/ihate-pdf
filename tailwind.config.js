@@ -5,7 +5,7 @@ module.exports = {
     extend: {
       colors: {
         ilp: {
-          red: '#e42722',
+          red: '#e5322d',
           'red-hover': '#c91c18',
           dark: '#1c1c24',
           muted: '#6a6a74',
