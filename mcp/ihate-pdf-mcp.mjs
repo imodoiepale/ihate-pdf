@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * IHATE PDF MCP stdio bridge.
+ * i hate pdf MCP stdio bridge.
  * Forwards JSON-RPC to the local engine at http://127.0.0.1:43128/mcp
  * Enable MCP in Settings first, and keep `npm run dev` running.
  */
@@ -76,4 +76,4 @@ async function drain() {
 }
 
 stdin.on('end', () => process.exit(0))
-stderr.write('IHATE PDF MCP stdio bridge → ' + ENDPOINT + '\n')
+stderr.write('i hate pdf MCP stdio bridge → ' + ENDPOINT + '\n')

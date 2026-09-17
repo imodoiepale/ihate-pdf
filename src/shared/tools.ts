@@ -417,7 +417,7 @@ export const TOOLS: ToolDef[] = [
     id: 'protect',
     title: 'Protect PDF',
     tagline: 'Protect PDF files with a password. Encrypt PDF documents to prevent unauthorized access.',
-    description: 'AES-256 encryption via qpdf. Keep the password — IHATE PDF cannot recover it.',
+    description: 'AES-256 encryption via qpdf. Keep the password — i hate pdf cannot recover it.',
     color: '#2f8f7b',
     group: 'security',
     accept: pdf,

@@ -233,7 +233,7 @@ export function ToolWorkspace() {
       {engineDown && (
         <div className="mx-auto mt-6 max-w-[760px] px-5">
           <Callout tone="danger" title="Engine offline">
-            The desktop engine is not running. Start IHATE PDF with <code className="font-mono">npm run dev</code>{' '}
+            The desktop engine is not running. Start i hate pdf with <code className="font-mono">npm run dev</code>{' '}
             so file picking and PDF jobs can use your disk.
           </Callout>
         </div>
@@ -248,7 +248,7 @@ export function ToolWorkspace() {
       {files.some((f) => f.size >= 1024 * 1024 * 1024) && (
         <div className="mx-auto mt-4 max-w-[760px] px-5">
           <Callout tone="info" title="Huge file">
-            At least one file is 1 GB or larger. IHATE PDF will stream it on disk with qpdf and related CLI tools
+            At least one file is 1 GB or larger. i hate pdf will stream it on disk with qpdf and related CLI tools
             — it will not load the document into the page heap. Make sure the destination drive has enough free space.
             There is no app-imposed size or file-count cap.
           </Callout>

@@ -113,7 +113,7 @@ export async function startApiServer(port = API_PORT): Promise<void> {
   })
   return new Promise((resolve, reject) => {
     server.listen(port, '127.0.0.1', () => {
-      console.log(`IHATE PDF engine listening on http://127.0.0.1:${port}`)
+      console.log(`i hate pdf engine listening on http://127.0.0.1:${port}`)
       resolve()
     })
     server.on('error', reject)
@@ -130,7 +130,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   const url = new URL(req.url || '/', 'http://127.0.0.1')
   try {
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      send(res, 200, { ok: true, product: 'IHATE PDF' })
+      send(res, 200, { ok: true, product: 'i hate pdf' })
       return
     }
     if (req.method === 'GET' && url.pathname === '/api/settings') {
@@ -275,7 +275,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
         return
       }
       if (!isSafeIndexDir(body.indexDir, outputDir)) {
-        send(res, 400, { error: 'indexDir is not an IHATE PDF output folder' })
+        send(res, 400, { error: 'indexDir is not an i hate pdf output folder' })
         return
       }
       send(res, 200, await askParsed(body.indexDir, body.question, { useLlm: body.useLlm === true || body.useLlm === 'true', provider: body.provider }))
@@ -283,7 +283,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     }
     if ((req.method === 'GET' || req.method === 'POST') && (url.pathname === '/mcp' || url.pathname === '/api/mcp')) {
       if (!isMcpEnabled()) {
-        send(res, 404, { error: 'MCP is disabled. Enable it in IHATE PDF Settings.' })
+        send(res, 404, { error: 'MCP is disabled. Enable it in i hate pdf Settings.' })
         return
       }
       if (req.method === 'GET') {
