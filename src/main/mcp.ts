@@ -131,7 +131,7 @@ export async function handleMcpJsonRpc(
     return {
       protocolVersion: '2024-11-05',
       capabilities: { tools: {} },
-      serverInfo: { name: 'lovepdf-studio', version: '1.0.0' }
+      serverInfo: { name: 'ihate-pdf', version: '1.0.0' }
     }
   }
   if (method === 'notifications/initialized' || method === 'notifications/cancelled') {

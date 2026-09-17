@@ -29,7 +29,7 @@ export const PARSER_LIBRARIES: ParserLibrary[] = [
     url: 'https://github.com/pymupdf/PyMuPDF',
     speed: 'Typically 5–200 ms for a born-digital 10-page PDF. This is the sub-2-second path.',
     what: 'Native C library. Page text, blocks, tables, images. Iterates pages; does not load a 1 TB file into Python.',
-    notes: 'Default Analyze engine in LovePDF Studio when `import pymupdf` works. Measured ~5 ms on an 8-page digital PDF in this environment.',
+    notes: 'Default Analyze engine in IHATE PDF when `import pymupdf` works. Measured ~5 ms on an 8-page digital PDF in this environment.',
     detectKey: 'pymupdf'
   },
   {
@@ -62,7 +62,7 @@ export const PARSER_LIBRARIES: ParserLibrary[] = [
     url: 'https://github.com/jsvine/pdfplumber',
     speed: 'Fast on digital tables; we cap pages so it is never used as a 1 TB loader.',
     what: 'Character-level layout and table extraction for bank / M-Pesa ledgers.',
-    notes: 'Installed with Studio when pip is available. Complements PyMuPDF `find_tables()`.',
+    notes: 'Installed with IHATE PDF when pip is available. Complements PyMuPDF `find_tables()`.',
     detectKey: 'pdfplumber'
   },
   {
@@ -96,7 +96,7 @@ export const PARSER_LIBRARIES: ParserLibrary[] = [
     speed: 'Hosted VLM; seconds per complex page, not a local 2 s path.',
     what: 'Parse (layout JSON) and Extract (schema-typed fields). Strong commercial table/scan OCR.',
     notes:
-      'This is the product commonly misheard as “Razer / Extract”. LovePDF Studio implements the same *idea* locally: Parse (Analyze PDF) + Extract (Bank / M-Pesa / Invoice / Extract anything). Point Settings → OpenAI-compatible at a Reducto-compatible proxy if you have a key; we do not upload PDFs by default.',
+      'This is the product commonly misheard as “Razer / Extract”. IHATE PDF implements the same *idea* locally: Parse (Analyze PDF) + Extract (Bank / M-Pesa / Invoice / Extract anything). Point Settings → OpenAI-compatible at a Reducto-compatible proxy if you have a key; we do not upload PDFs by default.',
     detectKey: 'reducto'
   },
   {
@@ -162,7 +162,7 @@ export const PARSER_LIBRARIES: ParserLibrary[] = [
     url: 'https://www.llamaindex.ai/llamaextract',
     speed: 'Cloud schema extract on parsed docs.',
     what: 'Typed extraction (“extract anything”) from a JSON schema.',
-    notes: 'LovePDF Studio Extract anything does the local equivalent: regex/entities + optional BYO LLM schema fill.',
+    notes: 'IHATE PDF Extract anything does the local equivalent: regex/entities + optional BYO LLM schema fill.',
     detectKey: 'llama_extract'
   },
   {
@@ -193,7 +193,7 @@ export const PARSER_LIBRARIES: ParserLibrary[] = [
     kind: 'local-ocr',
     status: 'shipped',
     url: 'https://github.com/tesseract-ocr/tesseract',
-    speed: 'Seconds per scanned page. Capped in Studio.',
+    speed: 'Seconds per scanned page. Capped in IHATE PDF.',
     what: 'Scans with almost no text layer.',
     notes: 'System package `tesseract-ocr`. Used automatically when pages look empty.',
     detectKey: 'tesseract'
@@ -205,8 +205,8 @@ export const PARSER_LIBRARIES: ParserLibrary[] = [
     status: 'optional',
     url: 'https://github.com/ocrmypdf/OCRmyPDF',
     speed: 'Adds a hidden text layer with Tesseract; then PyMuPDF is sub-2 s again.',
-    what: 'Production OCR PDF writer. The OCR PDF tool in Studio is the lightweight cousin.',
-    notes: 'Optional. Run OCR PDF in Studio, then Analyze / extract.',
+    what: 'Production OCR PDF writer. The OCR PDF tool in IHATE PDF is the lightweight cousin.',
+    notes: 'Optional. Run OCR PDF in IHATE PDF, then Analyze / extract.',
     detectKey: 'ocrmypdf'
   },
   {
@@ -228,7 +228,7 @@ export const PARSER_LIBRARIES: ParserLibrary[] = [
     url: 'https://www.ragie.ai/',
     speed: 'Hosted RAG ingest.',
     what: 'Document RAG API. Another name that sounds like “Razer”.',
-    notes: 'Not bundled. Studio already indexes chunks on disk for Ask PDF.',
+    notes: 'Not bundled. IHATE PDF already indexes chunks on disk for Ask PDF.',
     detectKey: 'ragie'
   },
   {
@@ -261,7 +261,7 @@ export const PARSER_LIBRARIES: ParserLibrary[] = [
     url: 'https://github.com/PaddlePaddle/PaddleOCR',
     speed: 'GPU-friendly OCR. Surya is Marker’s detector.',
     what: 'Scanned ledgers when Tesseract is not enough.',
-    notes: 'Optional. Studio ships Tesseract; these are upgrades you can install yourself.',
+    notes: 'Optional. IHATE PDF ships Tesseract; these are upgrades you can install yourself.',
     detectKey: 'paddleocr'
   }
 ]

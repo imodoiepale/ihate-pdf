@@ -127,7 +127,7 @@ export async function chat(
           resolved,
           messages,
           opts,
-          resolved.id === 'openrouter' ? { 'HTTP-Referer': 'http://127.0.0.1:43127', 'X-Title': 'LovePDF Studio' } : {}
+          resolved.id === 'openrouter' ? { 'HTTP-Referer': 'http://127.0.0.1:43127', 'X-Title': 'IHATE PDF' } : {}
         )
   return { text, provider: resolved.id, model: resolved.model }
 }

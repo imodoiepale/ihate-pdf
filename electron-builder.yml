@@ -1,5 +1,5 @@
-appId: com.lovepdf.studio
-productName: LovePDF Studio
+appId: com.ihatepdf.app
+productName: IHATE PDF
 directories:
   buildResources: build
 files:

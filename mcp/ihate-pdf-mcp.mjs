@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 /**
- * LovePDF Studio MCP stdio bridge.
+ * IHATE PDF MCP stdio bridge.
  * Forwards JSON-RPC to the local engine at http://127.0.0.1:43128/mcp
  * Enable MCP in Settings first, and keep `npm run dev` running.
  */
 import { stdin, stdout, stderr } from 'node:process'
 
-const ENGINE = (process.env.LOVEPDF_ENGINE || 'http://127.0.0.1:43128').replace(/\/+$/, '')
-const ENDPOINT = process.env.LOVEPDF_MCP_URL || ENGINE + '/mcp'
+const ENGINE = (process.env.IHATEPDF_ENGINE || process.env.IHATE_PDF_ENGINE || 'http://127.0.0.1:43128').replace(
+  /\/+$/,
+  ''
+)
+const ENDPOINT = process.env.IHATEPDF_MCP_URL || process.env.IHATE_PDF_MCP_URL || ENGINE + '/mcp'
 
 function writeMessage(obj) {
   const json = JSON.stringify(obj)
@@ -73,4 +76,4 @@ async function drain() {
 }
 
 stdin.on('end', () => process.exit(0))
-stderr.write('LovePDF Studio MCP stdio bridge → ' + ENDPOINT + '\n')
+stderr.write('IHATE PDF MCP stdio bridge → ' + ENDPOINT + '\n')

@@ -31,7 +31,7 @@ export function Footer() {
         ))}
       </div>
       <div className="mx-auto mt-10 flex max-w-[1180px] flex-col gap-2 px-5 text-[12px] text-[#8a8a93] sm:flex-row sm:items-center sm:justify-between">
-        <p>LovePDF Studio processes files locally with qpdf, Ghostscript, Poppler, LibreOffice, and Tesseract.</p>
+        <p>IHATE PDF processes files locally with qpdf, Ghostscript, Poppler, LibreOffice, and Tesseract.</p>
         <p>
           <Link to="/settings" className="hover:text-ilp-red">
             Settings

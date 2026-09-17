@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 
-const dir = join(tmpdir(), 'lovepdf-engine-test')
+const dir = join(tmpdir(), 'ihate-pdf-engine-test')
 rmSync(dir, { recursive: true, force: true })
 mkdirSync(dir, { recursive: true })
 

@@ -356,7 +356,7 @@ function McpPanel({
       <p className="text-[13.5px] leading-relaxed text-[#5c5c66]">
         Cursor and other MCP clients can call the same local engine. Two options: HTTP JSON-RPC at{' '}
         <code className="font-mono">{prefs.mcp.url}</code>, or the stdio server{' '}
-        <code className="font-mono">node mcp/lovepdf-mcp.mjs</code>. Tools: parse_pdf, extract_bank, extract_mpesa,
+        <code className="font-mono">node mcp/ihate-pdf-mcp.mjs</code>. Tools: parse_pdf, extract_bank, extract_mpesa,
         extract_invoice, extract_anything, ask_pdf. We wrap the engine rather than inventing a competing protocol;
         Microsoft MarkItDown also ships <code className="font-mono">markitdown-mcp</code> if you want the generic
         converter.
@@ -394,10 +394,10 @@ function McpPanel({
 function AboutPanel() {
   return (
     <div className="space-y-4">
-      <h2 className="text-[18px] font-extrabold tracking-tight text-ilp-dark">About LovePDF Studio</h2>
+      <h2 className="text-[18px] font-extrabold tracking-tight text-ilp-dark">About IHATE PDF</h2>
       <div className="surface p-5 text-[14px] leading-relaxed text-[#5c5c66]">
         <p>
-          LovePDF Studio is an independent, open-source desktop PDF toolbox. It is not affiliated with, endorsed
+          IHATE PDF is an independent, open-source desktop PDF toolbox. It is not affiliated with, endorsed
           by, or a substitute name for iLovePDF.
         </p>
         <p className="mt-3">

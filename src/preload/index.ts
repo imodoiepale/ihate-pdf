@@ -1,6 +1,6 @@
 import { contextBridge } from 'electron'
 
-contextBridge.exposeInMainWorld('lovepdf', {
+contextBridge.exposeInMainWorld('ihatepdf', {
   desktop: true,
   versions: process.versions
 })

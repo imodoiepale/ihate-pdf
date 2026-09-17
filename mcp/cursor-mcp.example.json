@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "lovepdf": {
+    "ihate-pdf": {
       "command": "node",
-      "args": ["mcp/lovepdf-mcp.mjs"],
+      "args": ["mcp/ihate-pdf-mcp.mjs"],
       "env": {
-        "LOVEPDF_ENGINE": "http://127.0.0.1:43128"
+        "IHATEPDF_ENGINE": "http://127.0.0.1:43128"
       }
     },
     "markitdown": {

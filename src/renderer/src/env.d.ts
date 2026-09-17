@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 interface Window {
-  lovepdf?: {
+  ihatepdf?: {
     desktop: boolean
     versions: NodeJS.ProcessVersions
   }

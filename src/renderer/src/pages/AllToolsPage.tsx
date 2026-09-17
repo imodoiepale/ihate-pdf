@@ -22,7 +22,7 @@ export function AllToolsPage() {
         All PDF tools
       </h1>
       <p className="mx-auto mt-2 max-w-xl text-center text-[15px] text-[#5c5c66]">
-        The full desktop studio. Pick a tool, drop files, and process them on disk.
+        The full local-first studio. Pick a tool, drop files, and process them on disk.
       </p>
       <div className="mx-auto mt-6 max-w-md">
         <input

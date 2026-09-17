@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/screenshots/studio-window.jpg" alt="LovePDF Studio desktop window" width="920" />
+  <img src="docs/screenshots/studio-window.jpg" alt="IHATE PDF desktop window" width="920" />
 </p>
 
-<h1 align="center">LovePDF Studio</h1>
+<h1 align="center">IHATE PDF</h1>
 
 <p align="center">
   <strong>A local-first desktop PDF studio.</strong><br />
@@ -18,7 +18,7 @@
   <img alt="No upload cap" src="https://img.shields.io/badge/file%20size-disk%20limited-f4a025" />
 </p>
 
-LovePDF Studio is an independent, open-source Electron app. Nothing is uploaded unless you explicitly tick **Use cloud LLM** on an extract, summarize, ask, or translate job. There is no account, no quota, and no artificial file-size or file-count cap. A 1&nbsp;TB PDF is limited by **free disk and time**, not by a browser heap.
+IHATE PDF is an independent, open-source, local-first Electron app. It is a PDF studio that drops iLovePDF-style upload caps, quotas, and accounts. Nothing is uploaded unless you explicitly tick **Use cloud LLM** on an extract, summarize, ask, or translate job. A 1&nbsp;TB PDF is limited by **free disk and time**, not by a browser heap.
 
 It is **not affiliated with iLovePDF**.
 
@@ -35,7 +35,7 @@ It is **not affiliated with iLovePDF**.
 | <img src="docs/screenshots/merge.png" alt="Merge PDF drop zone" /> | <img src="docs/screenshots/analyze.png" alt="Analyze PDF workspace" /> |
 
 <p align="center">
-  <img src="docs/screenshots/home-narrow.png" alt="LovePDF Studio in a smaller window" width="520" />
+  <img src="docs/screenshots/home-narrow.png" alt="IHATE PDF in a smaller window" width="520" />
   <br /><em>The same chrome, tightened for a smaller desktop window.</em>
 </p>
 
@@ -43,7 +43,7 @@ It is **not affiliated with iLovePDF**.
 
 ## Why a desktop studio
 
-Browser PDF sites hit three walls: upload limits, storage quotas, and RAM. LovePDF Studio keeps every file on disk and shells out to streaming CLI tools (`qpdf`, Poppler, Ghostscript, LibreOffice, img2pdf, Tesseract). The renderer sends **paths**, not bytes.
+Browser PDF sites hit three walls: upload limits, storage quotas, and RAM. IHATE PDF keeps every file on disk and shells out to streaming CLI tools (`qpdf`, Poppler, Ghostscript, LibreOffice, img2pdf, Tesseract). The renderer sends **paths**, not bytes.
 
 | You get | How |
 | --- | --- |
@@ -81,9 +81,9 @@ The same engine is available to Cursor, Claude Desktop, and other MCP clients.
 | Transport | How |
 | --- | --- |
 | HTTP JSON-RPC | Enable **Settings → MCP**, then `http://127.0.0.1:43128/mcp` |
-| stdio | `node mcp/lovepdf-mcp.mjs` (example: [`mcp/cursor-mcp.example.json`](mcp/cursor-mcp.example.json)) |
+| stdio | `node mcp/ihate-pdf-mcp.mjs` (example: [`mcp/cursor-mcp.example.json`](mcp/cursor-mcp.example.json)) |
 
-Tools: `parse_pdf`, `extract_bank`, `extract_mpesa`, `extract_invoice`, `extract_anything`, `ask_pdf`. Paths stay on this machine. Optionally run Microsoft’s `markitdown-mcp` beside it for generic file → markdown.
+Tools: `parse_pdf`, `extract_bank`, `extract_mpesa`, `extract_invoice`, `extract_anything`, `ask_pdf`. Paths stay on this machine. Optionally run Microsoft’s `markitdown-mcp` beside it for generic file → markdown. The stdio bridge reads `IHATEPDF_ENGINE` (or `IHATE_PDF_ENGINE`) and optional `IHATEPDF_MCP_URL`.
 
 ---
 
@@ -91,12 +91,12 @@ Tools: `parse_pdf`, `extract_bank`, `extract_mpesa`, `extract_invoice`, `extract
 
 ```mermaid
 flowchart LR
-  UI["React UI<br/>127.0.0.1:43127"] -->|fetch + SSE| Engine["LovePDF Studio engine<br/>127.0.0.1:43128"]
+  UI["React UI<br/>127.0.0.1:43127"] -->|fetch + SSE| Engine["IHATE PDF engine<br/>127.0.0.1:43128"]
   MCP["MCP HTTP / stdio"] --> Engine
   Engine --> CLI["qpdf · Ghostscript · Poppler<br/>LibreOffice · img2pdf · Tesseract"]
   Engine --> Parse["PyMuPDF · MarkItDown · pdftotext<br/>pdfplumber · pypdf"]
   Engine --> LLM["BYO OpenRouter / OpenAI<br/>Anthropic / compatible"]
-  Engine --> Disk["~/Documents/LovePDF Studio"]
+  Engine --> Disk["~/Documents/IHATE PDF"]
 ```
 
 Jobs are queued so a folder of hundreds of PDFs does not fork hundreds of processes.
@@ -122,7 +122,7 @@ Missing binaries fail with an install hint instead of a silent stub.
 - The renderer never reads file bytes into `Buffer` / `ArrayBuffer` for processing.
 - Analyze writes `pages/` and `chunks/` on disk. Retrieval scores those files. Default index cap is 200 pages unless you pass a range or tick “entire document”.
 - Intermediate work lives in the OS temp directory and is deleted when the job finishes.
-- Outputs land in `~/Documents/LovePDF Studio` (changeable in Settings).
+- Outputs land in `~/Documents/IHATE PDF` (changeable in Settings).
 - Ghostscript (lossy compress, PDF/A) can use more RAM; files over ~2&nbsp;GB stay on the `qpdf` path when that is safer.
 - Processing a 1&nbsp;TB file still needs roughly that much **free disk** for the output.
 
@@ -168,11 +168,11 @@ Renderer-only: `npm run dev:web` — the engine still has to be up for picking f
 
 ---
 
-## Parsers we researched (and how Studio uses them)
+## Parsers we researched (and how IHATE PDF uses them)
 
-Open **Settings → Parsers** in the app for live install status. “Razer / Extract” is [Reducto Parse + Extract](https://reducto.ai/parse) (also sometimes Azure Document Intelligence or Ragie). Studio implements the same split locally: **Parse** (Analyze PDF) and **Extract** (Bank / M-PESA / Invoice / Extract anything).
+Open **Settings → Parsers** in the app for live install status. “Razer / Extract” is [Reducto Parse + Extract](https://reducto.ai/parse) (also sometimes Azure Document Intelligence or Ragie). IHATE PDF implements the same split locally: **Parse** (Analyze PDF) and **Extract** (Bank / M-PESA / Invoice / Extract anything).
 
-| Library | Role in Studio | Speed class |
+| Library | Role in IHATE PDF | Speed class |
 | --- | --- | --- |
 | **[PyMuPDF](https://github.com/pymupdf/PyMuPDF)** | **Default.** Shipped when `pip install pymupdf` is present. | Sub-2 s (often 5–200 ms) |
 | **[Microsoft MarkItDown](https://github.com/microsoft/markitdown)** | Optional markdown path | ~1–3 s |
@@ -203,4 +203,4 @@ Bank extract reads **every ledger line**. M-PESA extract keeps receipt, completi
 
 [MIT](LICENSE) © James Epale
 
-LovePDF Studio is independent open-source software. Not affiliated with, endorsed by, or a substitute name for iLovePDF.
+IHATE PDF is independent open-source software. Not affiliated with, endorsed by, or a substitute name for iLovePDF.

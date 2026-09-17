@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 
-const dir = await mkdtemp(join(tmpdir(), 'lovepdf-extract-'))
+const dir = await mkdtemp(join(tmpdir(), 'ihate-pdf-extract-'))
 const pyFile = join(dir, 'make.py')
 await writeFile(
   pyFile,

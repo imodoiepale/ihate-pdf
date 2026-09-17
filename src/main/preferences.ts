@@ -54,7 +54,7 @@ export function preferencesPath(): string {
   } catch {
     /* fall through */
   }
-  return join(homedir(), '.config', 'lovepdf-studio', 'preferences.json')
+  return join(homedir(), '.config', 'ihate-pdf', 'preferences.json')
 }
 
 function emptyStored(): StoredPreferences {

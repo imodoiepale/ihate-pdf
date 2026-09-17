@@ -1,7 +1,7 @@
 {
-  "name": "lovepdf-studio",
+  "name": "ihate-pdf",
   "version": "1.0.0",
-  "description": "LovePDF Studio — local-first desktop PDF toolbox. Merge, split, compress, convert, and batch huge files on disk. Bring your own LLM keys.",
+  "description": "IHATE PDF — local-first desktop PDF studio that drops iLovePDF-style upload caps, quotas, and accounts. Merge, split, compress, convert, and batch huge files on disk. Bring your own LLM keys.",
   "main": "./out/main/index.js",
   "author": "James Epale <ijepale@gmail.com>",
   "license": "MIT",
@@ -14,7 +14,7 @@
     "smoke": "node scripts/smoke-pdf.mjs",
     "test:engine": "node scripts/smoke-pdf.mjs",
     "test:extract": "node scripts/test-extract.mjs",
-    "mcp": "node mcp/lovepdf-mcp.mjs"
+    "mcp": "node mcp/ihate-pdf-mcp.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

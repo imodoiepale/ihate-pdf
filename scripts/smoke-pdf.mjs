@@ -41,7 +41,7 @@ function miniPdf(text) {
   return body
 }
 
-const dir = await mkdtemp(join(tmpdir(), 'lovepdf-smoke-'))
+const dir = await mkdtemp(join(tmpdir(), 'ihate-pdf-smoke-'))
 const a = join(dir, 'a.pdf')
 const b = join(dir, 'b.pdf')
 const merged = join(dir, 'merged.pdf')

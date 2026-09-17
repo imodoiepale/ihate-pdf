@@ -10,7 +10,7 @@ function dataDir(): string {
   } catch {
     /* ignore */
   }
-  return join(homedir(), '.config', 'lovepdf-studio')
+  return join(homedir(), '.config', 'ihate-pdf')
 }
 
 function keyFile(): string {
@@ -49,7 +49,7 @@ export function encryptString(plain: string): Buffer {
     return Buffer.concat([Buffer.from('S1'), safeStorage.encryptString(plain)])
   }
   const iv = randomBytes(12)
-  const key = scryptSync(machineKey(), 'lovepdf-llm-v1', 32)
+  const key = scryptSync(machineKey(), 'ihate-pdf-llm-v1', 32)
   const cipher = createCipheriv('aes-256-gcm', key, iv)
   const ct = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()])
   return Buffer.concat([Buffer.from('A1'), iv, cipher.getAuthTag(), ct])
@@ -68,7 +68,7 @@ export function decryptString(buf: Buffer): string {
     const iv = buf.subarray(2, 14)
     const tag = buf.subarray(14, 30)
     const ct = buf.subarray(30)
-    const key = scryptSync(machineKey(), 'lovepdf-llm-v1', 32)
+    const key = scryptSync(machineKey(), 'ihate-pdf-llm-v1', 32)
     const decipher = createDecipheriv('aes-256-gcm', key, iv)
     decipher.setAuthTag(tag)
     return Buffer.concat([decipher.update(ct), decipher.final()]).toString('utf8')

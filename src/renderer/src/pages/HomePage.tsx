@@ -6,13 +6,14 @@ export function HomePage() {
   return (
     <div>
       <section className="mx-auto max-w-[760px] px-5 pb-4 pt-12 text-center sm:pt-16">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ilp-red">LovePDF Studio</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ilp-red">IHATE PDF</p>
         <h1 className="mt-3 text-[30px] font-extrabold leading-[1.12] tracking-tightest text-ilp-dark sm:text-[42px]">
           Every PDF tool you need, on this computer
         </h1>
         <p className="mx-auto mt-4 max-w-[600px] text-[15px] leading-relaxed text-[#5c5c66] sm:text-[16px]">
-          Merge, split, compress, convert, crop, protect, and batch-process documents locally. No uploads, no
-          quotas, no account. A 1&nbsp;TB file is limited by disk space and time — not by a browser heap.
+          A local-first PDF studio that drops iLovePDF-style upload caps, quotas, and accounts. Merge, split,
+          compress, convert, crop, protect, and batch-process documents on disk. A 1&nbsp;TB file is limited by disk
+          space and time — not by a browser heap.
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-[12px] font-semibold text-[#5c5c66]">
           <Pill>On-device</Pill>
@@ -57,7 +58,7 @@ export function HomePage() {
           />
           <Feature
             title="Margins, storage, many PDFs"
-            body="Crop or add margins in millimetres. Process hundreds of files in a queue. Outputs land in your LovePDF Studio folder — not someone else’s cloud."
+            body="Crop or add margins in millimetres. Process hundreds of files in a queue. Outputs land in your IHATE PDF folder — not someone else’s cloud."
           />
           <Feature
             title="Huge documents stay on disk"
@@ -70,7 +71,7 @@ export function HomePage() {
               <p className="text-[15px] font-bold text-ilp-dark">Bring your own models</p>
               <p className="mt-1 max-w-xl text-[13.5px] text-[#5c5c66]">
                 OpenRouter, OpenAI, Anthropic, or any OpenAI-compatible endpoint. Keys stay on this machine and
-                power analysis tools without a LovePDF Studio account.
+                power analysis tools without an IHATE PDF account.
               </p>
             </div>
             <Link to="/settings" className="btn-primary shrink-0">
