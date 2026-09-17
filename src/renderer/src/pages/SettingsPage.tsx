@@ -400,7 +400,7 @@ function AboutPanel() {
       </h2>
       <div className="surface p-5 text-[14px] leading-relaxed text-[#5c5c66]">
         <p>
-          i hate pdf is an independent, open-source desktop PDF toolbox. It is not affiliated with, endorsed
+          IHATE PDF is an independent, open-source desktop PDF toolbox. It is not affiliated with, endorsed
           by, or a substitute name for iLovePDF.
         </p>
         <p className="mt-3">
