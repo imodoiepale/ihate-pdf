@@ -104,6 +104,7 @@ linux:
   maintainer: James Epale <ijepale@gmail.com>
   vendor: James Epale
   executableName: ihate-pdf
+  syncDesktopName: true
   desktop:
     entry:
       Name: i hate pdf
