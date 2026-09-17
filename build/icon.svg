@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="i hate pdf">
+  <title>i hate pdf</title>
+  <rect width="512" height="512" rx="112" fill="#e5322d"/>
+  <g fill="none">
+    <path fill="#ffffff" d="M156 132c0-18 14-32 32-32h118l62 62v218c0 18-14 32-32 32H188c-18 0-32-14-32-32V132z"/>
+    <path fill="#e5322d" d="M306 100l80 80H338c-18 0-32-14-32-32V100z"/>
+    <path fill="#ffffff" fill-opacity=".85" d="M306 100v72c0 6 4 10 10 10h70L306 100z"/>
+    <rect x="196" y="268" width="140" height="18" rx="9" fill="#e5322d"/>
+    <rect x="196" y="304" width="140" height="18" rx="9" fill="#e5322d"/>
+    <rect x="196" y="340" width="88" height="18" rx="9" fill="#e5322d"/>
+  </g>
+  <text x="52" y="455" fill="#ffffff" font-family="Inter, ui-sans-serif, sans-serif" font-size="86" font-weight="800">i</text>
+</svg>

@@ -1,4 +1,5 @@
 import { app, BrowserWindow, shell } from 'electron'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { startApiServer } from './api'
 import { extraPath } from './run'
@@ -13,7 +14,15 @@ app.commandLine.appendSwitch('disable-dev-shm-usage')
 
 const API_ONLY = process.argv.includes('--api-only')
 
+function appIcon(): string | undefined {
+  const packed = join(process.resourcesPath || '', 'icon.png')
+  if (app.isPackaged && existsSync(packed)) return packed
+  const dev = join(__dirname, '../../build/icon.png')
+  return existsSync(dev) ? dev : undefined
+}
+
 async function createWindow(): Promise<void> {
+  const icon = appIcon()
   const win = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -21,6 +30,7 @@ async function createWindow(): Promise<void> {
     minHeight: 600,
     backgroundColor: '#ffffff',
     title: 'i hate pdf',
+    ...(icon ? { icon } : {}),
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

@@ -6,7 +6,7 @@ import type { JobRequest, JobResult } from '@shared/types'
 import type { JobProgress } from '@shared/types'
 import { PARSER_LIBRARIES, mergeLibraryStatus, type LibraryRuntime } from '@shared/libraries'
 import { defaultTmp } from './paths'
-import { ensureDir, parseRanges, rmQuiet, run, uniquePath, whichSync } from './run'
+import { ensureDir, parseRanges, resolvePython, rmQuiet, run, uniquePath, whichSync } from './run'
 import { BANK_SCHEMA, INVOICE_SCHEMA, MPESA_SCHEMA, anythingSchema, chat, parseJsonLoose } from './llm'
 import { resolveLlm } from './preferences'
 
@@ -21,7 +21,7 @@ function extractPy(): string {
 }
 
 function py(): string {
-  return whichSync('python3') || 'python3'
+  return resolvePython()
 }
 
 export async function extractEngines(): Promise<Record<string, boolean | string>> {

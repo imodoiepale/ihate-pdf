@@ -17,6 +17,8 @@
   <img alt="BYO LLM" src="https://img.shields.io/badge/LLM-bring%20your%20own%20keys-6b4eff" />
   <img alt="MCP" src="https://img.shields.io/badge/MCP-HTTP%20%2B%20stdio-10a37f" />
   <img alt="No upload cap" src="https://img.shields.io/badge/file%20size-disk%20limited-f4a025" />
+  <a href="https://github.com/imodoiepale/ihate-pdf/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/imodoiepale/ihate-pdf?include_prereleases" /></a>
+  <a href="https://github.com/imodoiepale/ihate-pdf/actions/workflows/release.yml"><img alt="Release workflow" src="https://img.shields.io/github/actions/workflow/status/imodoiepale/ihate-pdf/release.yml?label=installers" /></a>
 </p>
 
 <p align="center">
@@ -27,7 +29,71 @@
 
 It is **not affiliated with iLovePDF**.
 
-The npm package slug is `ihate-pdf`. The name on screen is three lowercase words: a red **i**, then ` hate pdf`.
+The npm package slug is `ihate-pdf`. The name on screen is three lowercase words: a red **i**, then ` hate pdf`. App id: `com.ihatepdf.app`.
+
+---
+
+## Install (one-click)
+
+Installers are built by [GitHub Actions](https://github.com/imodoiepale/ihate-pdf/actions/workflows/release.yml) (`windows-latest`, `macos-latest`, `ubuntu-latest`) and attached to [GitHub Releases](https://github.com/imodoiepale/ihate-pdf/releases) on tags `v*`.
+
+| OS | Download | One-click |
+| --- | --- | --- |
+| **Windows x64** | `ihate-pdf-*-win-x64-setup.exe` (NSIS) | Double-click and go. Per-user, no option maze. A portable `*-win-x64-portable.exe` is on the same release if you do not want an installer. |
+| **macOS** | `ihate-pdf-*-mac-universal.dmg` | Open the DMG, drag **i hate pdf** to Applications. CI ships an **unsigned** DMG (Apple notarization needs a paid Developer ID — see below). First launch: right-click → Open. |
+| **Linux** | `*.AppImage`, `.deb`, `.rpm` | AppImage: `chmod +x ihate-pdf-*.AppImage && ./ihate-pdf-*.AppImage`. Debian/Ubuntu: `sudo apt install ./ihate-pdf-*.deb` (apt also installs `qpdf` + `poppler-utils`). |
+
+From a clone:
+
+```bash
+# Linux / macOS — download the latest Release asset for this OS
+./scripts/install.sh
+
+# Windows (PowerShell) — download NSIS setup.exe and run it
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+```
+
+### PDF engines are not inside the .exe
+
+The Electron app **does not bundle qpdf, Poppler, Ghostscript, LibreOffice, or Tesseract**. qpdf is Apache-2.0 (we could ship a portable copy later); this build does not, so the installer never pretends those binaries live in the package.
+
+| Need | Tool | How |
+| --- | --- | --- |
+| Merge / split / organize / rotate / protect | **qpdf** | Required |
+| Analyze, PDF→JPG, extract images | **Poppler** (`pdftotext`, `pdftoppm`, `pdfimages`) | Required for those tools |
+| Lossy compress, PDF/A, repair rewrite | Ghostscript | Optional |
+| Office ↔ PDF | LibreOffice | Optional |
+| OCR | Tesseract | Optional |
+| Fast Analyze / bank extract | Python 3 + `pip install -r resources/requirements-extract.txt` | Optional (PyMuPDF) |
+
+One-click deps:
+
+```bash
+./scripts/install-deps.sh      # apt / dnf / pacman / Homebrew
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install-deps.ps1
+# Official qpdf Windows zip (Apache-2.0) + Poppler → %LOCALAPPDATA%\ihate-pdf\bin
+```
+
+Debian `.deb` already `Depends:` on `qpdf`, `poppler-utils`, and `python3`. Missing binaries fail with an install hint — they are not silent stubs.
+
+### Build installers from source
+
+```bash
+npm install
+npm run dist          # this OS
+npm run dist:win      # NSIS + portable .exe (x64) — run on Windows or CI
+npm run dist:mac      # universal DMG — run on macOS or CI
+npm run dist:linux    # AppImage + .deb + .rpm
+```
+
+Windows `.exe` artifacts come from GitHub Actions, not from a Linux checkout.
+
+### macOS notarization
+
+CI sets `CSC_IDENTITY_AUTO_DISCOVERY=false` and `mac.identity: null`, so the DMG is **unsigned**. To notarize, add a Developer ID certificate to the repo (`CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`) and turn `notarize` on in `electron-builder.yml`.
 
 ---
 
@@ -135,7 +201,7 @@ Missing binaries fail with an install hint instead of a silent stub.
 
 ---
 
-## Run it
+## Run from source
 
 System tools (once):
 
@@ -157,6 +223,7 @@ Then:
 ```bash
 npm install
 npm run dev
+# packaged installers: npm run dist / dist:win / dist:mac / dist:linux
 ```
 
 That starts:

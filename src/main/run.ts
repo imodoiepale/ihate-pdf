@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { createWriteStream, existsSync } from 'node:fs'
 import { mkdir, stat, unlink } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { delimiter, dirname, join } from 'node:path'
 import { pipeline } from 'node:stream/promises'
 
 export class CommandError extends Error {
@@ -15,25 +15,50 @@ export class CommandError extends Error {
   }
 }
 
-export function extraPath(): string {
+function bundledBinDirs(): string[] {
+  const resources = typeof process.resourcesPath === 'string' ? process.resourcesPath : ''
+  const home = homedir()
+  const localApp = process.env.LOCALAPPDATA || process.env.APPDATA || ''
+  const pf = process.env.ProgramFiles || 'C:\\Program Files'
+  const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
   return [
-    join(homedir(), '.local/bin'),
-    join(process.cwd(), 'resources/bin'),
+    join(home, '.local', 'bin'),
+    join(home, '.ihate-pdf', 'bin'),
+    localApp ? join(localApp, 'ihate-pdf', 'bin') : '',
+    resources,
+    resources ? join(resources, 'bin') : '',
+    join(process.cwd(), 'resources', 'bin'),
+    '/opt/homebrew/bin',
     '/usr/local/bin',
     '/usr/bin',
-    process.env.PATH || ''
-  ]
-    .filter(Boolean)
-    .join(':')
+    process.platform === 'win32' ? join(pf, 'qpdf', 'bin') : '',
+    process.platform === 'win32' ? join(pf, 'poppler', 'Library', 'bin') : '',
+    process.platform === 'win32' ? join(pf, 'poppler', 'bin') : '',
+    process.platform === 'win32' ? join(pf86, 'qpdf', 'bin') : '',
+    process.platform === 'win32' ? join(home, 'scoop', 'shims') : ''
+  ].filter(Boolean)
+}
+
+export function extraPath(): string {
+  return [...bundledBinDirs(), process.env.PATH || ''].join(delimiter)
 }
 
 export function whichSync(bin: string): string | null {
-  for (const dir of extraPath().split(':')) {
+  const names =
+    process.platform === 'win32' ? [bin, `${bin}.exe`, `${bin}.cmd`, `${bin}.bat`] : [bin]
+  for (const dir of extraPath().split(delimiter)) {
     if (!dir) continue
-    const p = join(dir, bin)
-    if (existsSync(p)) return p
+    for (const name of names) {
+      const p = join(dir, name)
+      if (existsSync(p)) return p
+    }
   }
   return null
+}
+
+/** python3 on Unix; python.exe / python3.exe on Windows. */
+export function resolvePython(): string {
+  return whichSync('python3') || whichSync('python') || (process.platform === 'win32' ? 'python' : 'python3')
 }
 
 export async function ensureDir(dir: string): Promise<void> {

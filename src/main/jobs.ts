@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
 import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import type { FileRef, JobProgress, JobRequest, JobResult } from '@shared/types'
-import { chunk, copyFileStream, ensureDir, parseOrder, parseRanges, rmQuiet, run, uniquePath, whichSync } from './run'
+import { chunk, copyFileStream, ensureDir, parseOrder, parseRanges, resolvePython, rmQuiet, run, uniquePath, whichSync } from './run'
 import { pdfInfo } from './pdfinfo'
 import { defaultOutputDir, defaultTmp } from './paths'
 import {
@@ -29,12 +29,16 @@ function workerPy(): string {
 }
 
 function py(): string {
-  return whichSync('python3') || 'python3'
+  return resolvePython()
 }
 
 function qpdf(): string {
   const b = whichSync('qpdf')
-  if (!b) throw new Error('qpdf is not installed. Install qpdf to process PDFs.')
+  if (!b) {
+    throw new Error(
+      'qpdf is not installed — it is not bundled inside this app. Run scripts/install-deps.sh or scripts/install-deps.ps1 (Windows: winget install QPDF.QPDF).'
+    )
+  }
   return b
 }
 
