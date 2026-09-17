@@ -7,8 +7,8 @@ export function HomePage() {
   return (
     <div>
       <section className="mx-auto max-w-[760px] px-5 pb-4 pt-12 text-center sm:pt-16">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em]">
-          <Wordmark />
+        <p>
+          <Wordmark className="text-[18px] sm:text-[20px]" />
         </p>
         <h1 className="mt-3 text-[30px] font-extrabold leading-[1.12] tracking-tightest text-ilp-dark sm:text-[42px]">
           Every PDF tool you need, on this computer
@@ -61,7 +61,7 @@ export function HomePage() {
           />
           <Feature
             title="Margins, storage, many PDFs"
-            body="Crop or add margins in millimetres. Process hundreds of files in a queue. Outputs land in your IHATE PDF folder — not someone else’s cloud."
+            body="Crop or add margins in millimetres. Process hundreds of files in a queue. Outputs land in your i hate pdf folder — not someone else’s cloud."
           />
           <Feature
             title="Huge documents stay on disk"
@@ -74,7 +74,7 @@ export function HomePage() {
               <p className="text-[15px] font-bold text-ilp-dark">Bring your own models</p>
               <p className="mt-1 max-w-xl text-[13.5px] text-[#5c5c66]">
                 OpenRouter, OpenAI, Anthropic, or any OpenAI-compatible endpoint. Keys stay on this machine and
-                power analysis tools without an IHATE PDF account.
+                power analysis tools without an i hate pdf account.
               </p>
             </div>
             <Link to="/settings" className="btn-primary shrink-0">

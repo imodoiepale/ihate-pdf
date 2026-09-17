@@ -1,47 +1,33 @@
 <h1 align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/brand/wordmark-dark.svg" />
-    <img src="docs/brand/wordmark.svg" alt="IHATE PDF" height="52" />
+    <img src="docs/brand/wordmark.svg" alt="i hate pdf" height="52" />
   </picture>
 </h1>
 
 <p align="center">
   <strong>A local-first desktop PDF studio.</strong><br />
-  Merge, split, extract, and analyze on this computer.<br />
-  No iLovePDF caps. No accounts. No upload.
+  Merge, split, compress, convert, crop, protect, analyze, and batch-extract — on this computer.
 </p>
 
 <p align="center">
-  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-1c1c24" />
-  <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/desktop-macOS%20%7C%20Windows%20%7C%20Linux-e5322d" />
-  <img alt="Files stay on disk" src="https://img.shields.io/badge/files-stay%20on%20disk-1c1c24" />
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-e5322d" />
+  <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-1c1c24" />
+  <img alt="Local-first" src="https://img.shields.io/badge/files-stay%20on%20disk-e5322d" />
+  <img alt="BYO LLM" src="https://img.shields.io/badge/LLM-bring%20your%20own%20keys-6b4eff" />
+  <img alt="MCP" src="https://img.shields.io/badge/MCP-HTTP%20%2B%20stdio-10a37f" />
+  <img alt="No upload cap" src="https://img.shields.io/badge/file%20size-disk%20limited-f4a025" />
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/studio-window.jpg" alt="IHATE PDF home — local PDF tools on the desktop" width="920" />
+  <img src="docs/screenshots/studio-window.jpg" alt="i hate pdf desktop window" width="920" />
 </p>
 
-**IHATE PDF** is an independent Electron app. Files never leave the machine unless you tick **Use cloud LLM** on an extract, summarize, ask, or translate job. A 1&nbsp;TB PDF is limited by **free disk and time**, not by a browser heap.
+**i hate pdf** is an independent, open-source Electron app. It is a PDF studio that drops iLovePDF-style upload caps, quotas, and accounts. Nothing is uploaded unless you explicitly tick **Use cloud LLM** on an extract, summarize, ask, or translate job. A 1&nbsp;TB PDF is limited by **free disk and time**, not by a browser heap.
 
 It is **not affiliated with iLovePDF**.
 
----
-
-## Why desktop
-
-Browser PDF sites hit three walls: upload limits, storage quotas, and RAM. IHATE PDF keeps every file on disk and shells out to streaming CLI tools. The renderer sends **paths**, not bytes.
-
-| You get | How |
-| --- | --- |
-| Merge / split / organize / rotate | `qpdf` page tree — the document is not loaded into Node |
-| Compress / PDF/A / repair | `qpdf` streams; Ghostscript only when you ask for a rewrite |
-| Office ↔ PDF | Local LibreOffice |
-| JPG / scans → PDF | `img2pdf` without decoding a giant bitmap |
-| Analyze in well under 2 s | [PyMuPDF](https://github.com/pymupdf/PyMuPDF) by default (often tens of milliseconds); [MarkItDown](https://github.com/microsoft/markitdown) for markdown; Poppler for huge files |
-| Bank, M-PESA, invoice extract | Line-by-line tables + regex; M-PESA auto-detect; optional LLM refine of **extracted text only** |
-| Extract anything | Local entities + your JSON schema or a plain-English request, on disk |
-| Ask / summarize / translate | On-disk chunks + your key — never the PDF bytes |
-| Huge batches | A job queue with bounded concurrency |
+The npm package slug is `ihate-pdf`. The name on screen is three lowercase words: a red **i**, then ` hate pdf`.
 
 ---
 
@@ -49,16 +35,78 @@ Browser PDF sites hit three walls: upload limits, storage quotas, and RAM. IHATE
 
 | Home | Settings · BYO keys |
 | --- | --- |
-| <img src="docs/screenshots/home.png" alt="Home tool grid with the IHATE PDF wordmark" /> | <img src="docs/screenshots/settings.png" alt="Bring-your-own API keys" /> |
+| <img src="docs/screenshots/home.png" alt="Home tool grid" /> | <img src="docs/screenshots/settings.png" alt="API key settings" /> |
 
-| Merge | Analyze PDF |
+| Merge empty state | Analyze PDF |
 | --- | --- |
 | <img src="docs/screenshots/merge.png" alt="Merge PDF drop zone" /> | <img src="docs/screenshots/analyze.png" alt="Analyze PDF workspace" /> |
 
 <p align="center">
-  <img src="docs/screenshots/home-narrow.png" alt="IHATE PDF in a smaller window" width="520" />
-  <br /><em>Same chrome, tighter window.</em>
+  <img src="docs/screenshots/home-narrow.png" alt="i hate pdf in a smaller window" width="520" />
+  <br /><em>The same chrome, tightened for a smaller desktop window.</em>
 </p>
+
+---
+
+## Why a desktop studio
+
+Browser PDF sites hit three walls: upload limits, storage quotas, and RAM. **i hate pdf** keeps every file on disk and shells out to streaming CLI tools (`qpdf`, Poppler, Ghostscript, LibreOffice, img2pdf, Tesseract). The renderer sends **paths**, not bytes.
+
+| You get | How |
+| --- | --- |
+| Merge / split / organize / rotate | `qpdf` page tree — does not load the document into Node |
+| Compress / PDF/A / repair | `qpdf` streams; Ghostscript only when you ask for a rewrite |
+| Office ↔ PDF | Local LibreOffice |
+| JPG / scans → PDF | `img2pdf` without decoding a giant bitmap |
+| Analyze in well under 2 s | [PyMuPDF](https://github.com/pymupdf/PyMuPDF) by default (often tens of milliseconds); [MarkItDown](https://github.com/microsoft/markitdown) for markdown; Poppler for huge files |
+| Bank, M-PESA, invoice extract | Line-by-line tables + regex; M-PESA auto-detect; optional LLM refine of **extracted text only** |
+| Extract anything | Local entities + your JSON schema or plain-English request (Reducto Extract-style, on disk) |
+| Ask / summarize / translate | On-disk chunks + your key, never the PDF bytes |
+| Huge batches | A job queue with bounded concurrency |
+
+---
+
+## Bring your own LLM keys
+
+Open **Settings → API keys** and connect any of:
+
+- **OpenRouter** — one key for GPT, Claude, Gemini, Llama, …
+- **OpenAI**
+- **Anthropic**
+- **OpenAI-compatible** — Ollama, vLLM, LM Studio, Together, Groq, Azure, or anything that speaks `/v1/chat/completions`
+
+Keys are encrypted with Electron `safeStorage` (OS keychain) when available, otherwise AES-256-GCM in a `0600` sidecar under the app user-data folder. The UI never shows a raw key after save (only `••••last4`). **Test connection** sends `ping` / `pong` — no PDF.
+
+Environment fallbacks (optional): `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `OPENAI_COMPATIBLE_BASE_URL`.
+
+---
+
+## MCP
+
+The same engine is available to Cursor, Claude Desktop, and other MCP clients.
+
+| Transport | How |
+| --- | --- |
+| HTTP JSON-RPC | Enable **Settings → MCP**, then `http://127.0.0.1:43128/mcp` |
+| stdio | `node mcp/ihate-pdf-mcp.mjs` (example: [`mcp/cursor-mcp.example.json`](mcp/cursor-mcp.example.json)) |
+
+Tools: `parse_pdf`, `extract_bank`, `extract_mpesa`, `extract_invoice`, `extract_anything`, `ask_pdf`. Paths stay on this machine. Optionally run Microsoft’s `markitdown-mcp` beside it for generic file → markdown. The stdio bridge reads `IHATEPDF_ENGINE` (or `IHATE_PDF_ENGINE`) and optional `IHATEPDF_MCP_URL`.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  UI["React UI<br/>127.0.0.1:43127"] -->|fetch + SSE| Engine["i hate pdf engine<br/>127.0.0.1:43128"]
+  MCP["MCP HTTP / stdio"] --> Engine
+  Engine --> CLI["qpdf · Ghostscript · Poppler<br/>LibreOffice · img2pdf · Tesseract"]
+  Engine --> Parse["PyMuPDF · MarkItDown · pdftotext<br/>pdfplumber · pypdf"]
+  Engine --> LLM["BYO OpenRouter / OpenAI<br/>Anthropic / compatible"]
+  Engine --> Disk["~/Documents/IHATE PDF"]
+```
+
+Jobs are queued so a folder of hundreds of PDFs does not fork hundreds of processes.
 
 ---
 
@@ -76,18 +124,14 @@ Missing binaries fail with an install hint instead of a silent stub.
 
 ---
 
-## Bring your own keys
+## Huge files, honestly
 
-Open **Settings → API keys** and connect any of:
-
-- **OpenRouter** — one key for GPT, Claude, Gemini, Llama, …
-- **OpenAI**
-- **Anthropic**
-- **OpenAI-compatible** — Ollama, vLLM, LM Studio, Together, Groq, Azure, or anything that speaks `/v1/chat/completions`
-
-Keys are encrypted with Electron `safeStorage` (OS keychain) when available, otherwise AES-256-GCM in a `0600` sidecar under the app user-data folder. After save, the UI shows `••••last4`. **Test connection** sends `ping` / `pong` — no PDF.
-
-Optional env fallbacks: `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `OPENAI_COMPATIBLE_BASE_URL`.
+- The renderer never reads file bytes into `Buffer` / `ArrayBuffer` for processing.
+- Analyze writes `pages/` and `chunks/` on disk. Retrieval scores those files. Default index cap is 200 pages unless you pass a range or tick “entire document”.
+- Intermediate work lives in the OS temp directory and is deleted when the job finishes.
+- Outputs land in `~/Documents/IHATE PDF` (changeable in Settings).
+- Ghostscript (lossy compress, PDF/A) can use more RAM; files over ~2&nbsp;GB stay on the `qpdf` path when that is safer.
+- Processing a 1&nbsp;TB file still needs roughly that much **free disk** for the output.
 
 ---
 
@@ -131,51 +175,34 @@ Renderer-only: `npm run dev:web` — the engine still has to be up for picking f
 
 ---
 
-## Parsers
+## Parsers we researched (and how i hate pdf uses them)
 
-Open **Settings → Parsers** for live install status. Default path is **PyMuPDF**. Bank / M-PESA extract reads **every ledger line** (receipt, completion time, details, status, Paid In, Withdrawn, Balance). Extract anything accepts a JSON schema or a sentence like “all till numbers and the closing balance”.
+Open **Settings → Parsers** in the app for live install status. “Razer / Extract” is [Reducto Parse + Extract](https://reducto.ai/parse) (also sometimes Azure Document Intelligence or Ragie). **i hate pdf** implements the same split locally: **Parse** (Analyze PDF) and **Extract** (Bank / M-PESA / Invoice / Extract anything).
 
-| Library | Role | Speed |
+| Library | Role in i hate pdf | Speed class |
 | --- | --- | --- |
-| **[PyMuPDF](https://github.com/pymupdf/PyMuPDF)** | Default Analyze engine | Sub-2 s (often 5–200 ms) |
+| **[PyMuPDF](https://github.com/pymupdf/PyMuPDF)** | **Default.** Shipped when `pip install pymupdf` is present. | Sub-2 s (often 5–200 ms) |
 | **[Microsoft MarkItDown](https://github.com/microsoft/markitdown)** | Optional markdown path | ~1–3 s |
 | **[Poppler pdftotext](https://poppler.freedesktop.org/)** | Huge-file streaming fallback | Windowed, disk-safe |
 | **[pdfplumber](https://github.com/jsvine/pdfplumber)** | Bank / M-PESA tables | Fast on digital ledgers |
 | **[pypdf](https://github.com/py-pdf/pypdf)** | PDF Forms | Form fields only |
-| **[Tesseract](https://github.com/tesseract-ocr/tesseract)** | OCR PDF | Seconds/page |
+| **[Extractous](https://github.com/yobix-ai/extractous)** | Optional “Extract” library (Rust/Tika) | Fast Office/email |
+| **[Reducto Parse + Extract](https://reducto.ai/parse)** | Cloud analogue of Analyze + Extract anything | Hosted VLM |
+| **[Azure Document Intelligence](https://learn.microsoft.com/azure/ai-services/document-intelligence/)** | Cloud; another “Razer” mishear | Cloud |
+| **[Marker 2](https://github.com/datalab-to/marker)** | Optional layout (not bundled) | Fast no-OCR CPU |
+| **[IBM Docling](https://github.com/docling-project/docling)** | Optional layout | ~0.5–3 s/page |
+| **[MinerU](https://github.com/opendatalab/MinerU)** | Optional formulas/CJK | GPU |
+| **[LlamaParse](https://github.com/run-llama/llama_parse) / LlamaExtract** | Cloud RAG + schema extract | Cloud |
+| **[Unstructured](https://github.com/Unstructured-IO/unstructured)** | Optional elements pipeline | Seconds/page |
+| **[Camelot / Tabula](https://github.com/camelot-dev/camelot)** | Classic M-PESA `mpesa2csv` stack; Java not required here | Per-page tables |
+| **[Tesseract](https://github.com/tesseract-ocr/tesseract) / OCRmyPDF** | Scans | Seconds/page |
+| **Amazon Textract / Google Document AI** | Cloud forms | Cloud |
+| **[Ragie](https://www.ragie.ai/)** | Hosted RAG | Cloud |
+| **Apache Tika** | Prefer Extractous | JVM |
+| **GROBID** | Academic PDFs | Optional |
+| **PaddleOCR / EasyOCR / Surya** | Optional OCR upgrades | GPU-friendly |
 
-Settings also catalogs Extractous, Reducto Parse + Extract, Docling, Marker, MinerU, LlamaParse, and others — optional or cloud, never required. IHATE PDF implements the local split: **Parse** (Analyze PDF) and **Extract** (Bank / M-PESA / Invoice / Extract anything).
-
----
-
-## MCP
-
-The same engine is available to Cursor, Claude Desktop, and other MCP clients.
-
-| Transport | How |
-| --- | --- |
-| HTTP JSON-RPC | Enable **Settings → MCP**, then `http://127.0.0.1:43128/mcp` |
-| stdio | `node mcp/ihate-pdf-mcp.mjs` (example: [`mcp/cursor-mcp.example.json`](mcp/cursor-mcp.example.json)) |
-
-Tools: `parse_pdf`, `extract_bank`, `extract_mpesa`, `extract_invoice`, `extract_anything`, `ask_pdf`. Paths stay on this machine. The stdio bridge reads `IHATEPDF_ENGINE` (or `IHATE_PDF_ENGINE`) and optional `IHATEPDF_MCP_URL`.
-
----
-
-## Architecture
-
-```mermaid
-flowchart LR
-  UI["React UI<br/>127.0.0.1:43127"] -->|fetch + SSE| Engine["IHATE PDF engine<br/>127.0.0.1:43128"]
-  MCP["MCP HTTP / stdio"] --> Engine
-  Engine --> CLI["qpdf · Ghostscript · Poppler<br/>LibreOffice · img2pdf · Tesseract"]
-  Engine --> Parse["PyMuPDF · MarkItDown · pdftotext<br/>pdfplumber · pypdf"]
-  Engine --> LLM["BYO OpenRouter / OpenAI<br/>Anthropic / compatible"]
-  Engine --> Disk["~/Documents/IHATE PDF"]
-```
-
-Jobs are queued so a folder of hundreds of PDFs does not fork hundreds of processes.
-
-Outputs land in `~/Documents/IHATE PDF` (changeable in Settings). Intermediate work lives in the OS temp directory and is deleted when the job finishes. Ghostscript (lossy compress, PDF/A) can use more RAM; files over ~2&nbsp;GB stay on the `qpdf` path when that is safer.
+Bank extract reads **every ledger line**. M-PESA extract keeps receipt, completion time, details, status, Paid In, Withdrawn, and Balance. Extract anything accepts a JSON schema or a sentence like “all till numbers and the closing balance”, and can refine with your LLM key without uploading the PDF.
 
 ---
 
@@ -183,4 +210,4 @@ Outputs land in `~/Documents/IHATE PDF` (changeable in Settings). Intermediate w
 
 [MIT](LICENSE) © James Epale
 
-Independent open-source software. Not affiliated with, endorsed by, or a substitute name for iLovePDF.
+**i hate pdf** is independent open-source software. Not affiliated with, endorsed by, or a substitute name for iLovePDF.
