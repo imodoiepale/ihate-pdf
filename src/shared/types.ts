@@ -132,6 +132,7 @@ export interface EngineStatus {
   concurrency: number
   diskFreeBytes: number
   extract?: Record<string, boolean | string>
+  vendor?: { bin: string; platform: string }
   llm?: {
     defaultProvider: string | null
     configured: string[]

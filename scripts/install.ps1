@@ -51,11 +51,12 @@ if ($Portable) {
 }
 
 if (-not $SkipDeps) {
-  $deps = Join-Path $PSScriptRoot "install-deps.ps1"
+  $deps = Join-Path $PSScriptRoot "install-pending.ps1"
+  if (-not (Test-Path $deps)) { $deps = Join-Path $PSScriptRoot "install-deps.ps1" }
   if (Test-Path $deps) {
-    Write-Host "Installing qpdf / Poppler (not bundled in the Electron app)…"
+    Write-Host "Installing missing PDF tools (qpdf / Poppler) into %LOCALAPPDATA%\ihate-pdf\bin…"
     & $deps
   } else {
-    Write-Host "Run scripts/install-deps.ps1 for qpdf and Poppler — they are not inside the .exe."
+    Write-Host "Run scripts/install-pending.ps1 if merge/analyze tools are missing."
   }
 }

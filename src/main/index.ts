@@ -2,9 +2,10 @@ import { app, BrowserWindow, shell } from 'electron'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { startApiServer } from './api'
-import { extraPath } from './run'
+import { extraPath, refreshToolPath } from './run'
 import { RENDERER_PORT } from '@shared/types'
 
+refreshToolPath()
 process.env.PATH = extraPath()
 
 app.setName('i hate pdf')

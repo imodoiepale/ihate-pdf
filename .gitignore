@@ -36,3 +36,14 @@ agent-tools/
 .tmp/
 .test-artifacts/
 /tmp/
+
+# downloaded vendor CLI binaries (qpdf / poppler)
+resources/bin/linux-x64/**
+resources/bin/linux-arm64/**
+resources/bin/win-x64/**
+resources/bin/win-arm64/**
+resources/bin/mac-arm64/**
+resources/bin/mac-x64/**
+!resources/bin/**/.gitkeep
+!resources/bin/**/.gitignore
+!resources/bin/**/README.md

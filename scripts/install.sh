@@ -90,5 +90,4 @@ if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
   echo "Add $BIN_DIR to PATH if the command is not found."
 fi
 echo
-echo "PDF engines (qpdf, Poppler) are NOT inside this AppImage."
-echo "Install them with: $(cd "$(dirname "$0")" && pwd)/install-deps.sh"
+echo "If a PDF tool is missing, run: $(cd "$(dirname "$0")" && pwd)/install-pending.sh"

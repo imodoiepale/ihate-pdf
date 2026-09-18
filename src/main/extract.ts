@@ -6,7 +6,7 @@ import type { JobRequest, JobResult } from '@shared/types'
 import type { JobProgress } from '@shared/types'
 import { PARSER_LIBRARIES, mergeLibraryStatus, type LibraryRuntime } from '@shared/libraries'
 import { defaultTmp } from './paths'
-import { resourceFile } from './resources'
+import { INSTALL_PENDING_HINT, resourceFile } from './resources'
 import { ensureDir, parseRanges, resolvePython, rmQuiet, run, uniquePath, whichSync } from './run'
 import { BANK_SCHEMA, INVOICE_SCHEMA, MPESA_SCHEMA, anythingSchema, chat, parseJsonLoose } from './llm'
 import { resolveLlm } from './preferences'
@@ -796,7 +796,7 @@ export async function runFormsJob(job: JobRequest, destRoot: string, cb: Emit): 
 
 export async function runExtractImagesJob(job: JobRequest, destRoot: string, cb: Emit): Promise<JobResult> {
   const pdfimages = whichSync('pdfimages')
-  if (!pdfimages) throw new Error('pdfimages is not installed. Linux: sudo apt install poppler-utils')
+  if (!pdfimages) throw new Error(`pdfimages is not installed. ${INSTALL_PENDING_HINT}`)
   const outputs: JobResult['outputs'] = []
   let i = 0
   for (const f of job.files) {
@@ -818,7 +818,7 @@ export async function runExtractImagesJob(job: JobRequest, destRoot: string, cb:
     const files = (await readdir(folder)).filter((n) => !n.startsWith('.'))
     if (!files.length) throw new Error(`No embedded images in ${f.name}. Use PDF to JPG to rasterize pages instead.`)
     const zip = whichSync('zip')
-    if (!zip) throw new Error('zip is not installed. Linux: sudo apt install zip')
+  if (!zip) throw new Error(`zip is not installed. ${INSTALL_PENDING_HINT}`)
     const zipPath = await uniquePath(join(destRoot, `${basename(f.name, extname(f.name))}-embedded-images.zip`))
     await run(zip, ['-r', '-q', zipPath, '.'], { cwd: folder })
     outputs.push(await resultFile(zipPath))

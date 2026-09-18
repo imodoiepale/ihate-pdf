@@ -38,6 +38,10 @@ extraResources:
     to: requirements-extract.txt
   - from: resources/bin
     to: bin
+  - from: scripts/install-pending.sh
+    to: scripts/install-pending.sh
+  - from: scripts/install-pending.ps1
+    to: scripts/install-pending.ps1
   - from: mcp
     to: mcp
   - from: build/icon.png

@@ -3,6 +3,7 @@ import { LLM_PROVIDERS, PROVIDER_META, type LlmProviderId, type StudioPreference
 import type { LibraryRuntime } from '@shared/libraries'
 import { apiGet, apiPost } from '../lib/api'
 import { Wordmark } from '../components/Wordmark'
+import { InstallToolsButton } from '../components/InstallToolsButton'
 
 type Tab = 'workspace' | 'providers' | 'parsers' | 'mcp' | 'about'
 
@@ -301,11 +302,34 @@ function WorkspacePanel({
   onPatch: (body: Record<string, unknown>, toast?: string) => Promise<void>
 }) {
   const [concurrency, setConcurrency] = useState(String(prefs.concurrency))
+  const [bins, setBins] = useState<Record<string, string | null> | null>(null)
+  const [vendor, setVendor] = useState<string>('')
+
+  async function loadBins() {
+    try {
+      const data = await apiGet<{
+        binaries: Record<string, string | null>
+        vendor?: { bin: string }
+      }>('/api/status')
+      setBins(data.binaries)
+      setVendor(data.vendor?.bin || '')
+    } catch {
+      setBins(null)
+    }
+  }
+
+  useEffect(() => {
+    void loadBins()
+  }, [])
 
   async function chooseOut() {
     const data = await apiPost<{ path: string | null }>('/api/pick-dir', {})
     if (data.path) await onPatch({ outputDir: data.path }, 'Output folder updated')
   }
+
+  const missing = bins
+    ? ['qpdf', 'pdftotext', 'pdfinfo', 'pdftoppm', 'pdfimages', 'python3'].filter((n) => !bins[n])
+    : []
 
   return (
     <div className="space-y-4">
@@ -333,6 +357,33 @@ function WorkspacePanel({
             Apply
           </button>
         </div>
+      </div>
+      <div className="surface p-5">
+        <p className="text-[12px] font-semibold uppercase tracking-wide text-ilp-muted">Local PDF tools</p>
+        <p className="mt-1 text-[13px] text-[#5c5c66]">
+          Merge and analyze need qpdf and Poppler. If a tool is missing, install only what is pending — the app
+          prepends the vendor folder to PATH so you do not need a terminal restart.
+        </p>
+        {vendor && <p className="mt-2 break-all font-mono text-[12px] text-ilp-muted">{vendor}</p>}
+        {bins && (
+          <ul className="mt-3 grid gap-1 text-[13px] sm:grid-cols-2">
+            {['qpdf', 'pdftotext', 'pdfinfo', 'pdftoppm', 'pdfimages', 'python3', 'gs', 'img2pdf', 'tesseract', 'soffice', 'zip'].map(
+              (name) => (
+                <li key={name} className={bins[name] ? 'text-emerald-800' : 'text-amber-800'}>
+                  {name}: {bins[name] ? 'found' : 'missing'}
+                </li>
+              )
+            )}
+          </ul>
+        )}
+        {missing.length > 0 && (
+          <p className="mt-3 text-[13px] text-amber-800">Missing: {missing.join(', ')}</p>
+        )}
+        <InstallToolsButton onDone={() => void loadBins()} />
+        <p className="mt-3 text-[12px] text-ilp-muted">
+          CLI equivalent: <code className="font-mono">scripts/install-pending.sh</code> or{' '}
+          <code className="font-mono">scripts/install-pending.ps1</code>
+        </p>
       </div>
     </div>
   )

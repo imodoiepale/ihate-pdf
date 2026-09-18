@@ -48,6 +48,88 @@ fn pdf_tools_dir(resource_dir: &Path, repo: &Path) -> PathBuf {
     repo.join("resources")
 }
 
+fn vendor_bin_dirs(resource_dir: &Path) -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    let plat = if cfg!(windows) {
+        if cfg!(target_arch = "aarch64") {
+            "win-arm64"
+        } else {
+            "win-x64"
+        }
+    } else if cfg!(target_os = "macos") {
+        if cfg!(target_arch = "aarch64") {
+            "mac-arm64"
+        } else {
+            "mac-x64"
+        }
+    } else if cfg!(target_arch = "aarch64") {
+        "linux-arm64"
+    } else {
+        "linux-x64"
+    };
+    for root in [
+        resource_dir.join("pdf-tools").join("bin"),
+        resource_dir.join("bin"),
+    ] {
+        dirs.push(root.join(plat).join("bin"));
+        dirs.push(root.join(plat));
+        dirs.push(root);
+    }
+    let home = std::env::var("HOME")
+        .ok()
+        .or_else(|| std::env::var("USERPROFILE").ok())
+        .map(PathBuf::from);
+    if let Some(home) = home {
+        if cfg!(target_os = "macos") {
+            dirs.push(
+                home.join("Library")
+                    .join("Application Support")
+                    .join("ihate-pdf")
+                    .join("bin"),
+            );
+        } else if cfg!(windows) {
+            if let Ok(local) = std::env::var("LOCALAPPDATA") {
+                dirs.push(PathBuf::from(local).join("ihate-pdf").join("bin"));
+            }
+        } else {
+            dirs.push(home.join(".local").join("share").join("ihate-pdf").join("bin"));
+        }
+        dirs.push(home.join(".ihate-pdf").join("bin"));
+        dirs.push(home.join(".local").join("bin"));
+    }
+    dirs
+}
+
+fn prepend_path(cmd: &mut Command, resource_dir: &Path) {
+    let sep = if cfg!(windows) { ';' } else { ':' };
+    let extra = vendor_bin_dirs(resource_dir);
+    let mut parts: Vec<String> = extra
+        .iter()
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect();
+    if let Ok(old) = std::env::var("PATH") {
+        parts.push(old);
+    }
+    cmd.env("PATH", parts.join(&sep.to_string()));
+    if !cfg!(windows) {
+        let libs: Vec<String> = extra
+            .iter()
+            .filter_map(|bin| bin.parent().map(|p| p.join("lib")))
+            .map(|p| p.to_string_lossy().into_owned())
+            .collect();
+        let key = if cfg!(target_os = "macos") {
+            "DYLD_LIBRARY_PATH"
+        } else {
+            "LD_LIBRARY_PATH"
+        };
+        let mut lib_parts = libs;
+        if let Ok(old) = std::env::var(key) {
+            lib_parts.push(old);
+        }
+        cmd.env(key, lib_parts.join(&sep.to_string()));
+    }
+}
+
 fn spawn_engine(app: &tauri::AppHandle) -> Result<(), String> {
     let repo = repo_dir();
     let resource_dir = app
@@ -80,6 +162,7 @@ fn spawn_engine(app: &tauri::AppHandle) -> Result<(), String> {
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    prepend_path(&mut cmd, &resource_dir);
 
     #[cfg(windows)]
     {

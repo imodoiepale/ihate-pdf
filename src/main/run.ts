@@ -3,7 +3,7 @@ import { createWriteStream, existsSync } from 'node:fs'
 import { mkdir, stat, unlink } from 'node:fs/promises'
 import { delimiter, dirname, join } from 'node:path'
 import { pipeline } from 'node:stream/promises'
-import { extraResourceBinDirs } from './resources'
+import { extraResourceBinDirs, extraResourceLibDirs } from './resources'
 
 export class CommandError extends Error {
   constructor(
@@ -15,17 +15,58 @@ export class CommandError extends Error {
   }
 }
 
-function bundledBinDirs(): string[] {
-  return extraResourceBinDirs()
+/** Original PATH at process start — extraPath() must not feed on its own output. */
+const SYSTEM_PATH = process.env.PATH || ''
+const SYSTEM_LD = process.env.LD_LIBRARY_PATH || ''
+const SYSTEM_DYLD = process.env.DYLD_LIBRARY_PATH || ''
+
+function uniqueJoin(parts: string[]): string {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const part of parts) {
+    if (!part || seen.has(part)) continue
+    seen.add(part)
+    out.push(part)
+  }
+  return out.join(delimiter)
+}
+
+export function extraLibPath(): string {
+  return extraResourceLibDirs().join(delimiter)
 }
 
 export function extraPath(): string {
-  return [...bundledBinDirs(), process.env.PATH || ''].join(delimiter)
+  return uniqueJoin([...extraResourceBinDirs(), ...SYSTEM_PATH.split(delimiter)])
+}
+
+/** Prepend vendor + bundled bins (and libs) onto this process. Safe to call before every job. */
+export function refreshToolPath(): string {
+  const next = extraPath()
+  process.env.PATH = next
+  const libs = extraLibPath()
+  if (libs) {
+    if (process.platform === 'darwin') {
+      process.env.DYLD_LIBRARY_PATH = uniqueJoin([...libs.split(delimiter), ...SYSTEM_DYLD.split(delimiter)])
+    } else if (process.platform !== 'win32') {
+      process.env.LD_LIBRARY_PATH = uniqueJoin([...libs.split(delimiter), ...SYSTEM_LD.split(delimiter)])
+    }
+  }
+  return next
+}
+
+function binNames(bin: string): string[] {
+  if (process.platform === 'win32') {
+    if (bin === 'gs') return ['gswin64c.exe', 'gswin64c', 'gswin32c.exe', 'gs.exe', 'gs']
+    if (bin === 'python3') return ['python3.exe', 'python.exe', 'python3', 'python']
+    if (bin === 'soffice') return ['soffice.exe', 'soffice.com', 'soffice']
+    return [bin, `${bin}.exe`, `${bin}.cmd`, `${bin}.bat`]
+  }
+  if (bin === 'python3') return ['python3', 'python']
+  return [bin]
 }
 
 export function whichSync(bin: string): string | null {
-  const names =
-    process.platform === 'win32' ? [bin, `${bin}.exe`, `${bin}.cmd`, `${bin}.bat`] : [bin]
+  const names = binNames(bin)
   for (const dir of extraPath().split(delimiter)) {
     if (!dir) continue
     for (const name of names) {
@@ -116,9 +157,15 @@ export function cancelAllChildren(): void {
 
 export function run(cmd: string, args: string[], opts: RunOptions = {}): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
+    const libEnv =
+      process.platform === 'win32'
+        ? {}
+        : process.platform === 'darwin'
+          ? { DYLD_LIBRARY_PATH: uniqueJoin([extraLibPath(), SYSTEM_DYLD]) }
+          : { LD_LIBRARY_PATH: uniqueJoin([extraLibPath(), SYSTEM_LD]) }
     const child = spawn(cmd, args, {
       cwd: opts.cwd,
-      env: { ...process.env, PATH: extraPath(), ...(opts.env || {}) },
+      env: { ...process.env, PATH: extraPath(), ...libEnv, ...(opts.env || {}) },
       stdio: ['pipe', 'pipe', 'pipe']
     })
     children.add(child)

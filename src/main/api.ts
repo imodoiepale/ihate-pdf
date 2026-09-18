@@ -20,7 +20,9 @@ import {
 } from './preferences'
 import { testProvider } from './llm'
 import { handleMcpJsonRpc, isSafeIndexDir, MCP_TOOLS } from './mcp'
-import { ensureDir, extraPath, formatBytes } from './run'
+import { ensureDir, extraPath, formatBytes, refreshToolPath } from './run'
+import { maybeEnsureVendorInBackground, runInstallPending } from './install-tools'
+import { userVendorBinDir, vendorPlatformKey } from './resources'
 
 const bus = new EventEmitter()
 bus.setMaxListeners(100)
@@ -114,6 +116,7 @@ async function pickFiles(multi: boolean, filters: { name: string; extensions: st
 }
 
 export async function startApiServer(port = API_PORT): Promise<void> {
+  refreshToolPath()
   process.env.PATH = extraPath()
   const prefs = await loadPreferences()
   if (prefs.outputDir) outputDir = prefs.outputDir
@@ -125,6 +128,7 @@ export async function startApiServer(port = API_PORT): Promise<void> {
   return new Promise((resolve, reject) => {
     server.listen(port, '127.0.0.1', () => {
       console.log(`i hate pdf engine listening on http://127.0.0.1:${port}`)
+      maybeEnsureVendorInBackground()
       resolve()
     })
     server.on('error', reject)
@@ -150,6 +154,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       return
     }
     if (req.method === 'GET' && url.pathname === '/api/status') {
+      refreshToolPath()
       const status: EngineStatus = await engineStatus(defaultTmp(), outputDir, concurrency)
       const extract = await extractEngines()
       const prefs = publicPreferences(outputDir, concurrency)
@@ -158,6 +163,10 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
         outputDir,
         formatFree: formatBytes(status.diskFreeBytes),
         extract,
+        vendor: {
+          bin: userVendorBinDir(),
+          platform: vendorPlatformKey()
+        },
         llm: {
           defaultProvider: prefs.defaultProvider,
           configured: Object.values(prefs.providers)
@@ -169,7 +178,14 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       return
     }
     if (req.method === 'GET' && url.pathname === '/api/bins') {
+      refreshToolPath()
       send(res, 200, detectBinaries())
+      return
+    }
+    if (req.method === 'POST' && url.pathname === '/api/install-tools') {
+      const body = await json<{ vendorOnly?: boolean }>(req)
+      const result = await runInstallPending({ vendorOnly: Boolean(body.vendorOnly) })
+      send(res, result.ok ? 200 : 207, result)
       return
     }
     if (req.method === 'GET' && url.pathname === '/api/libraries') {

@@ -35,7 +35,7 @@ The npm package slug is `ihate-pdf`. The name on screen is three lowercase words
 
 ## Install (one-click)
 
-Installers are built by [GitHub Actions](https://github.com/imodoiepale/ihate-pdf/actions/workflows/release.yml) (`windows-latest`, `macos-latest`, `ubuntu-latest`) and attached to [GitHub Releases](https://github.com/imodoiepale/ihate-pdf/releases) on tags `v*`. **Electron** and **Tauri** shells share this React UI and the local engine; qpdf / Poppler stay system packages.
+Installers are built by [GitHub Actions](https://github.com/imodoiepale/ihate-pdf/actions/workflows/release.yml) (`windows-latest`, `macos-latest`, `ubuntu-latest`) and attached to [GitHub Releases](https://github.com/imodoiepale/ihate-pdf/releases) on tags `v*`. **Electron** and **Tauri** shells share this React UI and the local engine. qpdf (Apache-2.0) may be bundled or downloaded into a user vendor folder; Poppler is GPL and is downloaded on first run / by `install-pending` rather than shipped inside extraResources.
 
 ### Electron — [v1.1.0](https://github.com/imodoiepale/ihate-pdf/releases/tag/v1.1.0)
 
@@ -48,7 +48,43 @@ Installers are built by [GitHub Actions](https://github.com/imodoiepale/ihate-pd
 | **Debian / Ubuntu** | `ihate-pdf-1.1.0-linux-amd64.deb` | [ihate-pdf-1.1.0-linux-amd64.deb](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-linux-amd64.deb) |
 | **Fedora / RHEL** | `ihate-pdf-1.1.0-linux-x86_64.rpm` | [ihate-pdf-1.1.0-linux-x86_64.rpm](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-linux-x86_64.rpm) |
 
-Windows NSIS is one-click (per-user, no option maze). macOS DMG is **unsigned** (right-click → Open). Linux AppImage: `chmod +x` then run. Debian `apt install ./ihate-pdf-*.deb` also pulls `qpdf` + `poppler-utils`. [v1.0.0](https://github.com/imodoiepale/ihate-pdf/releases/tag/v1.0.0) has the same Electron set if you need the previous tag.
+Windows NSIS is one-click (per-user, no option maze). macOS DMG is **unsigned** (right-click → Open). Linux AppImage: `chmod +x` then run. Debian `apt install ./ihate-pdf-*.deb` also pulls `qpdf` + `poppler-utils`. AppImage / NSIS / portable / Tauri do not require a manual `apt` for merge/analyze once vendor bins are installed (Settings → **Install missing tools**, or the pending script below).
+
+### If a tool is missing
+
+Jobs fail with an install hint when `qpdf`, `pdftotext`, or another CLI is not on the engine PATH. The engine searches, in order:
+
+1. Bundled `resources/bin/{linux-x64,win-x64,mac-arm64,mac-x64}/` (packaged extraResources / Tauri sidecars)
+2. User vendor dir — `~/.local/share/ihate-pdf/bin` (Linux), `%LOCALAPPDATA%\ihate-pdf\bin` (Windows), `~/Library/Application Support/ihate-pdf/bin` (macOS)
+3. System `PATH`
+
+PATH is prepended when the process starts and **re-scanned before every job**, so you do not need to restart the terminal for the app to see a vendor install.
+
+Install only what is missing (idempotent, non-interactive):
+
+```bash
+./scripts/install-pending.sh      # Linux / macOS (apt / dnf / pacman / brew + vendor qpdf/poppler)
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install-pending.ps1
+# Official qpdf Windows zip (Apache-2.0) + Poppler → %LOCALAPPDATA%\ihate-pdf\bin
+```
+
+`scripts/install-deps.sh` and `scripts/install-deps.ps1` call the same pending installer. In the app: **Settings → Workspace → Install missing tools** (also offered on first-run and on job errors).
+
+Debian `.deb` already `Depends:` on `qpdf`, `poppler-utils`, and `python3`. Ghostscript, LibreOffice, and Tesseract stay optional.
+
+### PDF engines
+
+| Need | Tool | How |
+| --- | --- | --- |
+| Merge / split / organize / rotate / protect | **qpdf** | Required (Apache-2.0 vendor zip or package) |
+| Analyze, PDF→JPG, extract images | **Poppler** (`pdftotext`, `pdftoppm`, `pdfimages`) | Required for those tools (GPL — user vendor download) |
+| Lossy compress, PDF/A, repair rewrite | Ghostscript | Optional |
+| Office ↔ PDF | LibreOffice | Optional |
+| OCR | Tesseract | Optional |
+| Fast Analyze / bank extract | Python 3 + `pip install -r resources/requirements-extract.txt` | Optional (PyMuPDF) |
 
 ### Tauri — [v1.1.0](https://github.com/imodoiepale/ihate-pdf/releases/tag/v1.1.0)
 
@@ -76,32 +112,6 @@ npm run tauri:build  # native installer for this OS
 # Windows (PowerShell) — download NSIS setup.exe and run it
 powershell -ExecutionPolicy Bypass -File scripts/install.ps1
 ```
-
-### PDF engines are not inside the .exe
-
-The Electron app **does not bundle qpdf, Poppler, Ghostscript, LibreOffice, or Tesseract**. qpdf is Apache-2.0 (we could ship a portable copy later); this build does not, so the installer never pretends those binaries live in the package.
-
-| Need | Tool | How |
-| --- | --- | --- |
-| Merge / split / organize / rotate / protect | **qpdf** | Required |
-| Analyze, PDF→JPG, extract images | **Poppler** (`pdftotext`, `pdftoppm`, `pdfimages`) | Required for those tools |
-| Lossy compress, PDF/A, repair rewrite | Ghostscript | Optional |
-| Office ↔ PDF | LibreOffice | Optional |
-| OCR | Tesseract | Optional |
-| Fast Analyze / bank extract | Python 3 + `pip install -r resources/requirements-extract.txt` | Optional (PyMuPDF) |
-
-One-click deps:
-
-```bash
-./scripts/install-deps.sh      # apt / dnf / pacman / Homebrew
-```
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/install-deps.ps1
-# Official qpdf Windows zip (Apache-2.0) + Poppler → %LOCALAPPDATA%\ihate-pdf\bin
-```
-
-Debian `.deb` already `Depends:` on `qpdf`, `poppler-utils`, and `python3`. Missing binaries fail with an install hint — they are not silent stubs.
 
 ### Build installers from source
 
@@ -217,7 +227,7 @@ Jobs are queued so a folder of hundreds of PDFs does not fork hundreds of proces
 **Security** — Protect, Unlock, Sign (image stamp), Redact, Compare  
 **Analyze & AI** — Analyze PDF, Bank extract, M-PESA extract, Invoice extract, Extract anything, Ask PDF, Summarize, Translate
 
-Missing binaries fail with an install hint instead of a silent stub.
+Missing binaries fail with an install hint and an **Install missing tools** button instead of a silent stub.
 
 ---
 
@@ -237,16 +247,7 @@ Missing binaries fail with an install hint instead of a silent stub.
 System tools (once):
 
 ```bash
-# Debian / Ubuntu
-sudo apt install qpdf poppler-utils ghostscript python3-img2pdf imagemagick \
-  libreoffice-nogui python3-reportlab python3-pikepdf zip tesseract-ocr
-
-# Fast local parse + extract (PyMuPDF is the sub-2s engine)
-pip install --user -r resources/requirements-extract.txt
-
-# macOS
-brew install qpdf poppler ghostscript img2pdf imagemagick
-# LibreOffice: https://www.libreoffice.org/
+./scripts/install-pending.sh
 ```
 
 Then:

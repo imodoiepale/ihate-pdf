@@ -2,10 +2,10 @@ import { createHash, randomUUID } from 'node:crypto'
 import { basename, extname, join } from 'node:path'
 import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import type { FileRef, JobProgress, JobRequest, JobResult } from '@shared/types'
-import { chunk, copyFileStream, ensureDir, parseOrder, parseRanges, resolvePython, rmQuiet, run, uniquePath, whichSync } from './run'
+import { chunk, copyFileStream, ensureDir, parseOrder, parseRanges, resolvePython, refreshToolPath, rmQuiet, run, uniquePath, whichSync } from './run'
 import { pdfInfo } from './pdfinfo'
 import { defaultOutputDir, defaultTmp } from './paths'
-import { resourceFile } from './resources'
+import { INSTALL_PENDING_HINT, resourceFile } from './resources'
 import { getElectron } from './optional-electron'
 import {
   runAskIndexJob,
@@ -34,9 +34,7 @@ function py(): string {
 function qpdf(): string {
   const b = whichSync('qpdf')
   if (!b) {
-    throw new Error(
-      'qpdf is not installed — it is not bundled inside this app. Run scripts/install-deps.sh or scripts/install-deps.ps1 (Windows: winget install QPDF.QPDF).'
-    )
+    throw new Error(`qpdf is not installed. ${INSTALL_PENDING_HINT}`)
   }
   return b
 }
@@ -46,12 +44,12 @@ function img2pdfBin(): { cmd: string; prefix: string[] } {
   if (bin) return { cmd: bin, prefix: [] }
   const python = whichSync('python3')
   if (python) return { cmd: python, prefix: ['-m', 'img2pdf'] }
-  throw new Error('img2pdf is not installed. pip install img2pdf or sudo apt install python3-img2pdf')
+  throw new Error(`img2pdf is not installed. ${INSTALL_PENDING_HINT}`)
 }
 
-function must(bin: string, hint: string): string {
+function must(bin: string, hint?: string): string {
   const b = whichSync(bin)
-  if (!b) throw new Error(`${bin} is not installed. ${hint}`)
+  if (!b) throw new Error(`${bin} is not installed. ${hint ? `${hint} ` : ''}${INSTALL_PENDING_HINT}`)
   return b
 }
 
@@ -461,6 +459,7 @@ export async function inspectFile(path: string, password?: string): Promise<Part
 }
 
 export async function runJob(job: JobRequest, cb: Emit): Promise<JobResult> {
+  refreshToolPath()
   const password = optStr(job.options, 'password') || undefined
   const destRoot = await outDirFor(job)
   emit(cb, job.id, 2, 'Preparing…')

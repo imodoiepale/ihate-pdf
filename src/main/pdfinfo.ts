@@ -27,6 +27,8 @@ export function detectBinaries(): Record<string, string | null> {
   ]
   const out: Record<string, string | null> = {}
   for (const n of names) out[n] = whichSync(n)
+  if (!out.python3) out.python3 = whichSync('python')
+  if (!out.gs) out.gs = whichSync('gswin64c')
   return out
 }
 

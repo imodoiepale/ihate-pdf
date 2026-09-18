@@ -1,11 +1,44 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GROUPS, TOOLS } from '@shared/tools'
 import { Wordmark } from '../components/Wordmark'
 import { ToolCard } from '../components/ToolCard'
+import { Callout } from '../components/Callout'
+import { InstallToolsButton } from '../components/InstallToolsButton'
+import { apiGet } from '../lib/api'
 
 export function HomePage() {
+  const [missingCore, setMissingCore] = useState(false)
+
+  function checkBins() {
+    apiGet<{ binaries: Record<string, string | null>; extract?: Record<string, boolean | string> }>('/api/status')
+      .then((s) => {
+        const qpdf = Boolean(s.binaries.qpdf)
+        const parse = Boolean(s.binaries.pdftotext) || Boolean(s.extract?.pymupdf)
+        setMissingCore(!qpdf || !parse)
+      })
+      .catch(() => {
+        /* engine may still be starting */
+      })
+  }
+
+  useEffect(() => {
+    checkBins()
+  }, [])
+
   return (
     <div>
+      {missingCore && (
+        <div className="mx-auto max-w-[760px] px-5 pt-6">
+          <Callout tone="warn" title="PDF engines are not on this machine yet">
+            <p>
+              Merge needs qpdf; Analyze needs Poppler or PyMuPDF. Install missing tools now — the app searches
+              bundled resources, then the vendor folder, then PATH.
+            </p>
+            <InstallToolsButton onDone={checkBins} />
+          </Callout>
+        </div>
+      )}
       <section className="mx-auto max-w-[760px] px-5 pb-4 pt-12 text-center sm:pt-16">
         <p>
           <Wordmark className="text-[18px] sm:text-[20px]" />

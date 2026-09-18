@@ -6,12 +6,14 @@ import { apiGet, apiPost, importBrowserFile, subscribeJob } from '../lib/api'
 import { formatBytes, formatPages } from '../lib/format'
 import { ToolIcon } from '../components/ToolIcon'
 import { Callout, EmptyDrop, LoadingBar } from '../components/Callout'
+import { InstallToolsButton, installHint } from '../components/InstallToolsButton'
 
 type Status = {
   outputDir: string
   formatFree: string
   binaries: Record<string, string | null>
   extract?: Record<string, boolean | string>
+  vendor?: { bin: string; platform: string }
   llm?: { defaultProvider: string | null; configured: string[]; encryption: string }
 }
 
@@ -55,7 +57,7 @@ export function ToolWorkspace() {
     setOpts({ ...defaults })
   }, [id])
 
-  useEffect(() => {
+  const refreshStatus = useCallback(() => {
     apiGet<Status>('/api/status')
       .then((s) => {
         setStatus(s)
@@ -63,6 +65,10 @@ export function ToolWorkspace() {
       })
       .catch(() => setEngineDown(true))
   }, [])
+
+  useEffect(() => {
+    refreshStatus()
+  }, [refreshStatus])
 
   const addFiles = useCallback((incoming: FileRef[]) => {
     setResult(null)
@@ -136,29 +142,28 @@ export function ToolWorkspace() {
   const missingHint = useMemo(() => {
     if (!tool || !status) return null
     const bins = status.binaries
-    const need = (name: string, hint: string) => (!bins[name] ? hint : null)
+    const need = (name: string, label: string) => (!bins[name] ? installHint(label) : null)
     if (['word-to-pdf', 'ppt-to-pdf', 'excel-to-pdf', 'pdf-to-word', 'pdf-to-ppt', 'pdf-to-excel', 'html-to-pdf'].includes(tool.id)) {
-      return need('soffice', 'LibreOffice is not installed. Office conversion needs soffice. Linux: sudo apt install libreoffice')
+      return need('soffice', 'LibreOffice (soffice)')
     }
-    if (tool.id === 'ocr') return need('tesseract', 'Tesseract is not installed. Linux: sudo apt install tesseract-ocr')
+    if (tool.id === 'ocr') return need('tesseract', 'Tesseract')
     if (tool.id === 'jpg-to-pdf' || tool.id === 'scan-to-pdf') {
-      return need('img2pdf', 'img2pdf is not installed. Linux: sudo apt install python3-img2pdf')
+      return need('img2pdf', 'img2pdf')
     }
-    if (tool.id === 'pdf-to-jpg') return need('pdftoppm', 'Poppler is not installed. Linux: sudo apt install poppler-utils')
-    if (tool.id === 'pdf-to-pdfa') return need('gs', 'Ghostscript is not installed. Linux: sudo apt install ghostscript')
+    if (tool.id === 'pdf-to-jpg') return need('pdftoppm', 'Poppler (pdftoppm)')
+    if (tool.id === 'pdf-to-pdfa') return need('gs', 'Ghostscript')
     if (
       ['parse-pdf', 'extract-bank', 'extract-mpesa', 'extract-invoice', 'extract-anything', 'ask-pdf', 'summarize-pdf', 'translate-pdf'].includes(
         tool.id
       )
     ) {
-      const poppler = need('pdftotext', 'pdftotext is not installed. Analyze/extract needs poppler-utils. Linux: sudo apt install poppler-utils')
       if (status.extract?.pymupdf) return null
-      return poppler
+      return need('pdftotext', 'Poppler (pdftotext)')
     }
     if (tool.id === 'extract-images') {
-      return need('pdfimages', 'pdfimages is not installed. Linux: sudo apt install poppler-utils')
+      return need('pdfimages', 'Poppler (pdfimages)')
     }
-    return need('qpdf', 'qpdf is not installed. Linux: sudo apt install qpdf')
+    return need('qpdf', 'qpdf')
   }, [tool, status])
 
   const ready = useMemo(() => {
@@ -241,7 +246,13 @@ export function ToolWorkspace() {
 
       {missingHint && (
         <div className="mx-auto mt-4 max-w-[760px] px-5">
-          <Callout tone="warn">{missingHint}</Callout>
+          <Callout tone="warn" title="A required tool is missing">
+            <p>{missingHint}</p>
+            {status?.vendor?.bin && (
+              <p className="mt-2 text-[12px] text-ilp-muted">Vendor folder: {status.vendor.bin}</p>
+            )}
+            <InstallToolsButton onDone={refreshStatus} />
+          </Callout>
         </div>
       )}
 
@@ -386,7 +397,10 @@ export function ToolWorkspace() {
         {error && (
           <div className="mt-6">
             <Callout tone="danger" title="Couldn’t finish this job">
-              {error}
+              <p>{error}</p>
+              {/not installed|MISSING|install-pending|poppler|qpdf is not/i.test(error) && (
+                <InstallToolsButton onDone={refreshStatus} />
+              )}
             </Callout>
           </div>
         )}

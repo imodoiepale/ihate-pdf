@@ -120,7 +120,13 @@ function stagePdfTools() {
   if (existsSync(binSrc)) cpSync(binSrc, join(dir, 'bin'), { recursive: true })
   const mcpSrc = join(root, 'mcp')
   if (existsSync(mcpSrc)) cpSync(mcpSrc, join(dir, 'mcp'), { recursive: true })
-  console.log('staged pdf-tools (python workers)')
+  const scriptsDir = join(dir, 'scripts')
+  mkdirSync(scriptsDir, { recursive: true })
+  for (const name of ['install-pending.sh', 'install-pending.ps1']) {
+    const src = join(root, 'scripts', name)
+    if (existsSync(src)) cpSync(src, join(scriptsDir, name))
+  }
+  console.log('staged pdf-tools (python workers + pending installer)')
 }
 
 async function main() {
