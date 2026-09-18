@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = dirname(fileURLToPath(new URL('../package.json', import.meta.url)))
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
-const version = pkg.version || '1.1.0'
+const version = pkg.version || '1.2.0'
 const bundle = join(root, 'src-tauri', 'target', 'release', 'bundle')
 const out = join(root, 'dist-tauri')
 mkdirSync(out, { recursive: true })

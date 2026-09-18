@@ -35,18 +35,18 @@ The npm package slug is `ihate-pdf`. The name on screen is three lowercase words
 
 ## Install (one-click)
 
-Installers are built by [GitHub Actions](https://github.com/imodoiepale/ihate-pdf/actions/workflows/release.yml) (`windows-latest`, `macos-latest`, `ubuntu-latest`) and attached to [GitHub Releases](https://github.com/imodoiepale/ihate-pdf/releases) on tags `v*`. **Electron** and **Tauri** shells share this React UI and the local engine. qpdf (Apache-2.0) may be bundled or downloaded into a user vendor folder; Poppler is GPL and is downloaded on first run / by `install-pending` rather than shipped inside extraResources.
+Installers are built by [GitHub Actions](https://github.com/imodoiepale/ihate-pdf/actions/workflows/release.yml) (`windows-latest`, `macos-latest`, `ubuntu-latest`) and attached to [GitHub Releases](https://github.com/imodoiepale/ihate-pdf/releases) on tags `v*`. **Electron** and **Tauri** shells share this React UI and the local engine. qpdf (Apache-2.0) may be bundled or downloaded into a user vendor folder; Poppler is GPL and is downloaded on first run / by `install-pending` rather than shipped inside extraResources. **v1.2.0** is the first packaged build with vendor PATH, `install-pending`, and Settings → **Install missing tools** (v1.1.0 was cut before that commit).
 
-### Electron — [v1.1.0](https://github.com/imodoiepale/ihate-pdf/releases/tag/v1.1.0)
+### Electron — [v1.2.0](https://github.com/imodoiepale/ihate-pdf/releases/tag/v1.2.0)
 
 | OS | File | Direct download |
 | --- | --- | --- |
-| **Windows x64 NSIS** | `ihate-pdf-1.1.0-win-x64-setup.exe` | [ihate-pdf-1.1.0-win-x64-setup.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-win-x64-setup.exe) |
-| **Windows x64 portable** | `ihate-pdf-1.1.0-win-x64-portable.exe` | [ihate-pdf-1.1.0-win-x64-portable.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-win-x64-portable.exe) |
-| **macOS universal DMG** | `ihate-pdf-1.1.0-mac-universal.dmg` | [ihate-pdf-1.1.0-mac-universal.dmg](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-mac-universal.dmg) |
-| **Linux AppImage** | `ihate-pdf-1.1.0-linux-x86_64.AppImage` | [ihate-pdf-1.1.0-linux-x86_64.AppImage](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-linux-x86_64.AppImage) |
-| **Debian / Ubuntu** | `ihate-pdf-1.1.0-linux-amd64.deb` | [ihate-pdf-1.1.0-linux-amd64.deb](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-linux-amd64.deb) |
-| **Fedora / RHEL** | `ihate-pdf-1.1.0-linux-x86_64.rpm` | [ihate-pdf-1.1.0-linux-x86_64.rpm](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-linux-x86_64.rpm) |
+| **Windows x64 NSIS** | `ihate-pdf-1.2.0-win-x64-setup.exe` | [ihate-pdf-1.2.0-win-x64-setup.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-win-x64-setup.exe) |
+| **Windows x64 portable** | `ihate-pdf-1.2.0-win-x64-portable.exe` | [ihate-pdf-1.2.0-win-x64-portable.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-win-x64-portable.exe) |
+| **macOS universal DMG** | `ihate-pdf-1.2.0-mac-universal.dmg` | [ihate-pdf-1.2.0-mac-universal.dmg](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-mac-universal.dmg) |
+| **Linux AppImage** | `ihate-pdf-1.2.0-linux-x86_64.AppImage` | [ihate-pdf-1.2.0-linux-x86_64.AppImage](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-linux-x86_64.AppImage) |
+| **Debian / Ubuntu** | `ihate-pdf-1.2.0-linux-amd64.deb` | [ihate-pdf-1.2.0-linux-amd64.deb](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-linux-amd64.deb) |
+| **Fedora / RHEL** | `ihate-pdf-1.2.0-linux-x86_64.rpm` | [ihate-pdf-1.2.0-linux-x86_64.rpm](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-linux-x86_64.rpm) |
 
 Windows NSIS is one-click (per-user, no option maze). macOS DMG is **unsigned** (right-click → Open). Linux AppImage: `chmod +x` then run. Debian `apt install ./ihate-pdf-*.deb` also pulls `qpdf` + `poppler-utils`. AppImage / NSIS / portable / Tauri do not require a manual `apt` for merge/analyze once vendor bins are installed (Settings → **Install missing tools**, or the pending script below).
 
@@ -86,17 +86,17 @@ Debian `.deb` already `Depends:` on `qpdf`, `poppler-utils`, and `python3`. Ghos
 | OCR | Tesseract | Optional |
 | Fast Analyze / bank extract | Python 3 + `pip install -r resources/requirements-extract.txt` | Optional (PyMuPDF) |
 
-### Tauri — [v1.1.0](https://github.com/imodoiepale/ihate-pdf/releases/tag/v1.1.0)
+### Tauri — [v1.2.0](https://github.com/imodoiepale/ihate-pdf/releases/tag/v1.2.0)
 
 Same product, lighter webview. The Tauri app **spawns the Node engine** plus the Python/qpdf pipeline; it does not replace Electron.
 
 | OS | File | Direct download |
 | --- | --- | --- |
-| **Windows x64 NSIS** | `ihate-pdf-1.1.0-tauri-win-x64-setup.exe` | [ihate-pdf-1.1.0-tauri-win-x64-setup.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-tauri-win-x64-setup.exe) |
-| **macOS Apple silicon DMG** | `ihate-pdf-1.1.0-tauri-mac-arm64.dmg` | [ihate-pdf-1.1.0-tauri-mac-arm64.dmg](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-tauri-mac-arm64.dmg) |
-| **Linux AppImage** | `ihate-pdf-1.1.0-tauri-linux-x86_64.AppImage` | [ihate-pdf-1.1.0-tauri-linux-x86_64.AppImage](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-tauri-linux-x86_64.AppImage) |
-| **Debian / Ubuntu** | `ihate-pdf-1.1.0-tauri-linux-amd64.deb` | [ihate-pdf-1.1.0-tauri-linux-amd64.deb](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-tauri-linux-amd64.deb) |
-| **Fedora / RHEL** | `ihate-pdf-1.1.0-tauri-linux-x86_64.rpm` | [ihate-pdf-1.1.0-tauri-linux-x86_64.rpm](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.1.0/ihate-pdf-1.1.0-tauri-linux-x86_64.rpm) |
+| **Windows x64 NSIS** | `ihate-pdf-1.2.0-tauri-win-x64-setup.exe` | [ihate-pdf-1.2.0-tauri-win-x64-setup.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-win-x64-setup.exe) |
+| **macOS Apple silicon DMG** | `ihate-pdf-1.2.0-tauri-mac-arm64.dmg` | [ihate-pdf-1.2.0-tauri-mac-arm64.dmg](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-mac-arm64.dmg) |
+| **Linux AppImage** | `ihate-pdf-1.2.0-tauri-linux-x86_64.AppImage` | [ihate-pdf-1.2.0-tauri-linux-x86_64.AppImage](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-linux-x86_64.AppImage) |
+| **Debian / Ubuntu** | `ihate-pdf-1.2.0-tauri-linux-amd64.deb` | [ihate-pdf-1.2.0-tauri-linux-amd64.deb](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-linux-amd64.deb) |
+| **Fedora / RHEL** | `ihate-pdf-1.2.0-tauri-linux-x86_64.rpm` | [ihate-pdf-1.2.0-tauri-linux-x86_64.rpm](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-linux-x86_64.rpm) |
 
 ```bash
 npm run tauri:dev    # Vite on http://127.0.0.1:43127 + engine on :43128
