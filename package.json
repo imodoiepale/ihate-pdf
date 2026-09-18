@@ -16,7 +16,7 @@
   "desktopName": "ihate-pdf.desktop",
   "scripts": {
     "dev": "electron-vite dev -- --no-sandbox --disable-gpu",
-    "dev:web": "electron-vite dev --rendererOnly",
+    "dev:web": "vite --config vite.web.config.ts",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "start": "electron-vite dev -- --no-sandbox --disable-gpu",
