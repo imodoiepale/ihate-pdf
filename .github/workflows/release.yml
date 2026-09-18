@@ -128,12 +128,6 @@ jobs:
 
       - run: npm ci
 
-      - name: Rasterize icons
-        run: |
-          python3 -m pip install --user pillow
-          python3 scripts/generate-icons.py
-          npx tauri icon build/icon.png
-
       - name: Build Tauri installers
         run: npx tauri build --bundles ${{ matrix.bundles }}
         env:
