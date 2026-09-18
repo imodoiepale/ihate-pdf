@@ -99,10 +99,13 @@ jobs:
         include:
           - os: windows-latest
             name: Windows NSIS
+            bundles: nsis
           - os: macos-latest
             name: macOS DMG
+            bundles: dmg
           - os: ubuntu-22.04
             name: Linux AppImage + deb + rpm
+            bundles: appimage,deb,rpm
     steps:
       - uses: actions/checkout@v4
 
@@ -132,7 +135,7 @@ jobs:
           npx tauri icon build/icon.png
 
       - name: Build Tauri installers
-        run: npm run tauri:build
+        run: npx tauri build --bundles ${{ matrix.bundles }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI: true

@@ -25,7 +25,7 @@ fn bundled_node(resource_dir: &Path) -> PathBuf {
 }
 
 fn engine_script(resource_dir: &Path, repo: &Path) -> PathBuf {
-    let packed = resource_dir.join("engine").join("index.cjs")
+    let packed = resource_dir.join("engine").join("index.cjs");
     if packed.exists() {
         return packed;
     }
