@@ -2,7 +2,10 @@
 node_modules/
 out/
 dist/
+dist-tauri/
 release/
+src-tauri/target/
+src-tauri/gen/
 *.tsbuildinfo
 
 # secrets — never commit keys

@@ -1,16 +1,11 @@
-import { app, safeStorage } from 'electron'
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto'
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { getElectron } from './optional-electron'
+import { userDataDir } from './paths'
 
 function dataDir(): string {
-  try {
-    if (app?.isReady?.()) return app.getPath('userData')
-  } catch {
-    /* ignore */
-  }
-  return join(homedir(), '.config', 'ihate-pdf')
+  return userDataDir()
 }
 
 function keyFile(): string {
@@ -22,8 +17,9 @@ function machineKeyPath(): string {
 }
 
 export function encryptionMode(): 'safeStorage' | 'aes-file' {
+  const electron = getElectron()
   try {
-    if (safeStorage?.isEncryptionAvailable?.()) return 'safeStorage'
+    if (electron?.safeStorage?.isEncryptionAvailable?.()) return 'safeStorage'
   } catch {
     /* ignore */
   }
@@ -45,8 +41,9 @@ function machineKey(): Buffer {
 }
 
 export function encryptString(plain: string): Buffer {
-  if (encryptionMode() === 'safeStorage') {
-    return Buffer.concat([Buffer.from('S1'), safeStorage.encryptString(plain)])
+  const electron = getElectron()
+  if (encryptionMode() === 'safeStorage' && electron?.safeStorage) {
+    return Buffer.concat([Buffer.from('S1'), electron.safeStorage.encryptString(plain)])
   }
   const iv = randomBytes(12)
   const key = scryptSync(machineKey(), 'ihate-pdf-llm-v1', 32)
@@ -62,7 +59,11 @@ export function decryptString(buf: Buffer): string {
     if (encryptionMode() !== 'safeStorage') {
       throw new Error('This key file needs the OS keychain. Unlock it and retry.')
     }
-    return safeStorage.decryptString(buf.subarray(2))
+    const electron = getElectron()
+    if (!electron?.safeStorage) {
+      throw new Error('This key file needs the OS keychain. Unlock it and retry.')
+    }
+    return electron.safeStorage.decryptString(buf.subarray(2))
   }
   if (mag === 'A1') {
     const iv = buf.subarray(2, 14)

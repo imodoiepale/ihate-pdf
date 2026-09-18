@@ -19,7 +19,7 @@ env:
 
 jobs:
   dist:
-    name: ${{ matrix.name }}
+    name: Electron ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -50,16 +50,16 @@ jobs:
 
       - run: npm ci
 
-      - name: Build installers
+      - name: Build Electron installers
         run: npm run ${{ matrix.cmd }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
-      - name: Upload dist artifacts
+      - name: Upload Electron dist artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ihate-pdf-${{ matrix.os }}
+          name: ihate-pdf-electron-${{ matrix.os }}
           if-no-files-found: error
           path: |
             dist/*.exe
@@ -72,7 +72,7 @@ jobs:
             dist/latest*.yml
             dist/latest*.yaml
 
-      - name: Publish GitHub Release (tags v*)
+      - name: Publish Electron GitHub Release (tags v*)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
@@ -89,3 +89,69 @@ jobs:
             dist/*.blockmap
             dist/latest*.yml
             dist/latest*.yaml
+
+  tauri:
+    name: Tauri ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows NSIS
+          - os: macos-latest
+            name: macOS DMG
+          - os: ubuntu-22.04
+            name: Linux AppImage + deb + rpm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Linux webkit + packagers
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev rpm fakeroot
+
+      - run: npm ci
+
+      - name: Rasterize icons
+        run: |
+          python3 -m pip install --user pillow
+          python3 scripts/generate-icons.py
+          npx tauri icon build/icon.png
+
+      - name: Build Tauri installers
+        run: npm run tauri:build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: true
+
+      - name: Collect stable artifact names
+        run: node scripts/collect-tauri-artifacts.mjs
+
+      - name: Upload Tauri artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ihate-pdf-tauri-${{ matrix.os }}
+          if-no-files-found: error
+          path: dist-tauri/*
+
+      - name: Publish Tauri GitHub Release (tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: false
+          files: dist-tauri/*

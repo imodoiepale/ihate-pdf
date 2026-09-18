@@ -15,6 +15,7 @@ files:
   - package.json
   - '!**/.vscode/*'
   - '!src/*'
+  - '!src-tauri/**'
   - '!docs/*'
   - '!resources/*'
   - '!mcp/*'

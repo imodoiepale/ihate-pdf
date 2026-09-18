@@ -1,9 +1,9 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { createWriteStream, existsSync } from 'node:fs'
 import { mkdir, stat, unlink } from 'node:fs/promises'
-import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { pipeline } from 'node:stream/promises'
+import { extraResourceBinDirs } from './resources'
 
 export class CommandError extends Error {
   constructor(
@@ -16,27 +16,7 @@ export class CommandError extends Error {
 }
 
 function bundledBinDirs(): string[] {
-  const resources = typeof process.resourcesPath === 'string' ? process.resourcesPath : ''
-  const home = homedir()
-  const localApp = process.env.LOCALAPPDATA || process.env.APPDATA || ''
-  const pf = process.env.ProgramFiles || 'C:\\Program Files'
-  const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
-  return [
-    join(home, '.local', 'bin'),
-    join(home, '.ihate-pdf', 'bin'),
-    localApp ? join(localApp, 'ihate-pdf', 'bin') : '',
-    resources,
-    resources ? join(resources, 'bin') : '',
-    join(process.cwd(), 'resources', 'bin'),
-    '/opt/homebrew/bin',
-    '/usr/local/bin',
-    '/usr/bin',
-    process.platform === 'win32' ? join(pf, 'qpdf', 'bin') : '',
-    process.platform === 'win32' ? join(pf, 'poppler', 'Library', 'bin') : '',
-    process.platform === 'win32' ? join(pf, 'poppler', 'bin') : '',
-    process.platform === 'win32' ? join(pf86, 'qpdf', 'bin') : '',
-    process.platform === 'win32' ? join(home, 'scoop', 'shims') : ''
-  ].filter(Boolean)
+  return extraResourceBinDirs()
 }
 
 export function extraPath(): string {

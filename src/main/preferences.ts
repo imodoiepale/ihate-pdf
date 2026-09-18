@@ -4,9 +4,7 @@
  */
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { app } from 'electron'
 import { API_ORIGIN } from '@shared/types'
 import {
   LLM_PROVIDERS,
@@ -15,7 +13,7 @@ import {
   type LlmProviderPublic,
   type StudioPreferencesPublic
 } from '@shared/preferences'
-import { defaultOutputDir } from './paths'
+import { defaultOutputDir, userDataDir } from './paths'
 import { encryptionMode, readVault, writeVault } from './secrets'
 
 const ENV_KEYS: Record<LlmProviderId, string> = {
@@ -49,12 +47,7 @@ interface StoredPreferences {
 let cache: StoredPreferences | null = null
 
 export function preferencesPath(): string {
-  try {
-    if (app?.isReady?.()) return join(app.getPath('userData'), 'preferences.json')
-  } catch {
-    /* fall through */
-  }
-  return join(homedir(), '.config', 'ihate-pdf', 'preferences.json')
+  return join(userDataDir(), 'preferences.json')
 }
 
 function emptyStored(): StoredPreferences {

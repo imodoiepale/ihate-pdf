@@ -1,11 +1,12 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
 import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import type { FileRef, JobProgress, JobRequest, JobResult } from '@shared/types'
 import { chunk, copyFileStream, ensureDir, parseOrder, parseRanges, resolvePython, rmQuiet, run, uniquePath, whichSync } from './run'
 import { pdfInfo } from './pdfinfo'
 import { defaultOutputDir, defaultTmp } from './paths'
+import { resourceFile } from './resources'
+import { getElectron } from './optional-electron'
 import {
   runAskIndexJob,
   runExtractImagesJob,
@@ -23,9 +24,7 @@ export type Emit = (p: JobProgress) => void
 /* defaultOutputDir / defaultTmp live in ./paths */
 
 function workerPy(): string {
-  const packed = join(process.resourcesPath || '', 'worker.py')
-  if (existsSync(packed)) return packed
-  return join(process.cwd(), 'resources/worker.py')
+  return resourceFile('worker.py')
 }
 
 function py(): string {
@@ -414,8 +413,11 @@ async function zipFolder(dir: string, zipPath: string): Promise<void> {
 async function htmlToPdf(job: JobRequest, output: string): Promise<void> {
   const url = optStr(job.options, 'url')
   if (url) {
-    const { BrowserWindow } = await import('electron')
-    const win = new BrowserWindow({
+    const electron = getElectron()
+    if (!electron?.BrowserWindow) {
+      throw new Error('HTML URL → PDF uses the Electron window. Open the Electron app, or convert a local HTML file with LibreOffice.')
+    }
+    const win = new electron.BrowserWindow({
       show: false,
       width: 1280,
       height: 1600,

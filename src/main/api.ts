@@ -3,13 +3,14 @@ import { randomUUID } from 'node:crypto'
 import { createWriteStream, existsSync, statSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { pipeline } from 'node:stream/promises'
-import { dialog, shell } from 'electron'
 import { EventEmitter } from 'node:events'
 import type { LlmProviderId } from '@shared/preferences'
 import { API_PORT, type EngineStatus, type FileRef, type JobRequest, type JobResult } from '@shared/types'
 import { detectBinaries, engineStatus } from './pdfinfo'
 import { defaultOutputDir, defaultTmp, inspectFile, makeFileRef, runJob } from './jobs'
 import { askParsed, extractEngines, libraryCatalog } from './extract'
+import { getElectron } from './optional-electron'
+import { nativeOpenPath, nativePickDir, nativePickFiles, nativeReveal } from './host-native'
 import {
   applyPreferencePatch,
   isMcpEnabled,
@@ -86,20 +87,30 @@ function enqueue(job: JobRequest): Promise<JobResult> {
   })
 }
 
-async function pickFiles(multi: boolean, filters: { name: string; extensions: string[] }[]): Promise<FileRef[]> {
-  const result = await dialog.showOpenDialog({
-    properties: multi ? ['openFile', 'multiSelections'] : ['openFile'],
-    filters: filters.length ? filters : [{ name: 'All files', extensions: ['*'] }]
-  })
-  if (result.canceled) return []
+async function refsFromPaths(paths: string[]): Promise<FileRef[]> {
   const refs: FileRef[] = []
-  for (const p of result.filePaths) {
+  for (const p of paths) {
     const st = statSync(p)
     const ref = makeFileRef(p, st.size)
     Object.assign(ref, await inspectFile(p))
     refs.push(ref)
   }
   return refs
+}
+
+async function pickFiles(multi: boolean, filters: { name: string; extensions: string[] }[]): Promise<FileRef[]> {
+  const electron = getElectron()
+  if (electron?.dialog) {
+    const result = await electron.dialog.showOpenDialog({
+      properties: multi ? ['openFile', 'multiSelections'] : ['openFile'],
+      filters: filters.length ? filters : [{ name: 'All files', extensions: ['*'] }]
+    })
+    if (result.canceled) return []
+    return refsFromPaths(result.filePaths)
+  }
+  const exts = filters.flatMap((f) => f.extensions || [])
+  const paths = await nativePickFiles(multi, exts)
+  return refsFromPaths(paths)
 }
 
 export async function startApiServer(port = API_PORT): Promise<void> {
@@ -177,8 +188,13 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       return
     }
     if (req.method === 'POST' && url.pathname === '/api/pick-dir') {
-      const result = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'] })
-      send(res, 200, { path: result.canceled ? null : result.filePaths[0] })
+      const electron = getElectron()
+      if (electron?.dialog) {
+        const result = await electron.dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'] })
+        send(res, 200, { path: result.canceled ? null : result.filePaths[0] })
+        return
+      }
+      send(res, 200, { path: await nativePickDir() })
       return
     }
     if (req.method === 'POST' && url.pathname === '/api/pick-files') {
@@ -327,13 +343,21 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     }
     if (req.method === 'POST' && url.pathname === '/api/open') {
       const body = await json<{ path: string }>(req)
-      if (body.path) await shell.openPath(body.path)
+      if (body.path) {
+        const electron = getElectron()
+        if (electron?.shell) await electron.shell.openPath(body.path)
+        else await nativeOpenPath(body.path)
+      }
       send(res, 200, { ok: true })
       return
     }
     if (req.method === 'POST' && url.pathname === '/api/reveal') {
       const body = await json<{ path: string }>(req)
-      if (body.path) shell.showItemInFolder(body.path)
+      if (body.path) {
+        const electron = getElectron()
+        if (electron?.shell) electron.shell.showItemInFolder(body.path)
+        else await nativeReveal(body.path)
+      }
       send(res, 200, { ok: true })
       return
     }

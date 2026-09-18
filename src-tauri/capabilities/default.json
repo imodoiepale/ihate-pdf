@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "Main i hate pdf window",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

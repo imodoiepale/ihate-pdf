@@ -35,15 +35,31 @@ The npm package slug is `ihate-pdf`. The name on screen is three lowercase words
 
 ## Install (one-click)
 
-Installers are built by [GitHub Actions](https://github.com/imodoiepale/ihate-pdf/actions/workflows/release.yml) (`windows-latest`, `macos-latest`, `ubuntu-latest`) and attached to [GitHub Releases](https://github.com/imodoiepale/ihate-pdf/releases) on tags `v*`.
+Installers are built by [GitHub Actions](https://github.com/imodoiepale/ihate-pdf/actions/workflows/release.yml) (`windows-latest`, `macos-latest`, `ubuntu-latest`) and attached to [GitHub Releases](https://github.com/imodoiepale/ihate-pdf/releases) on tags `v*`. **Electron** and **Tauri** shells share this React UI and the local engine; qpdf / Poppler stay system packages.
 
-| OS | Download | One-click |
+### Electron — [v1.0.0](https://github.com/imodoiepale/ihate-pdf/releases/tag/v1.0.0) (current downloadable builds)
+
+| OS | File | Direct download |
 | --- | --- | --- |
-| **Windows x64** | `ihate-pdf-*-win-x64-setup.exe` (NSIS) | Double-click and go. Per-user, no option maze. A portable `*-win-x64-portable.exe` is on the same release if you do not want an installer. |
-| **macOS** | `ihate-pdf-*-mac-universal.dmg` | Open the DMG, drag **i hate pdf** to Applications. CI ships an **unsigned** DMG (Apple notarization needs a paid Developer ID — see below). First launch: right-click → Open. |
-| **Linux** | `*.AppImage`, `.deb`, `.rpm` | AppImage: `chmod +x ihate-pdf-*.AppImage && ./ihate-pdf-*.AppImage`. Debian/Ubuntu: `sudo apt install ./ihate-pdf-*.deb` (apt also installs `qpdf` + `poppler-utils`). |
+| **Windows x64 NSIS** | `ihate-pdf-1.0.0-win-x64-setup.exe` | [ihate-pdf-1.0.0-win-x64-setup.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.0.0/ihate-pdf-1.0.0-win-x64-setup.exe) |
+| **Windows x64 portable** | `ihate-pdf-1.0.0-win-x64-portable.exe` | [ihate-pdf-1.0.0-win-x64-portable.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.0.0/ihate-pdf-1.0.0-win-x64-portable.exe) |
+| **macOS universal DMG** | `ihate-pdf-1.0.0-mac-universal.dmg` | [ihate-pdf-1.0.0-mac-universal.dmg](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.0.0/ihate-pdf-1.0.0-mac-universal.dmg) |
+| **Linux AppImage** | `ihate-pdf-1.0.0-linux-x86_64.AppImage` | [ihate-pdf-1.0.0-linux-x86_64.AppImage](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.0.0/ihate-pdf-1.0.0-linux-x86_64.AppImage) |
+| **Debian / Ubuntu** | `ihate-pdf-1.0.0-linux-amd64.deb` | [ihate-pdf-1.0.0-linux-amd64.deb](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.0.0/ihate-pdf-1.0.0-linux-amd64.deb) |
+| **Fedora / RHEL** | `ihate-pdf-1.0.0-linux-x86_64.rpm` | [ihate-pdf-1.0.0-linux-x86_64.rpm](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.0.0/ihate-pdf-1.0.0-linux-x86_64.rpm) |
 
-From a clone:
+Windows NSIS is one-click (per-user, no option maze). macOS DMG is **unsigned** (right-click → Open). Linux AppImage: `chmod +x` then run. Debian `apt install ./ihate-pdf-*.deb` also pulls `qpdf` + `poppler-utils`.
+
+### Tauri
+
+Same product, lighter webview. The Tauri app **spawns the Node engine** (`out/engine/index.cjs`) plus the Python/qpdf pipeline; it does not replace Electron. Windows / macOS / Linux installers are produced on the same [Release workflow](https://github.com/imodoiepale/ihate-pdf/actions/workflows/release.yml) as `ihate-pdf-<version>-tauri-*` assets on [Releases](https://github.com/imodoiepale/ihate-pdf/releases).
+
+```bash
+npm run tauri:dev    # Vite on http://127.0.0.1:43127 + engine on :43128
+npm run tauri:build  # native installer for this OS
+```
+
+### One-click from a clone
 
 ```bash
 # Linux / macOS — download the latest Release asset for this OS
@@ -87,9 +103,10 @@ npm run dist          # this OS
 npm run dist:win      # NSIS + portable .exe (x64) — run on Windows or CI
 npm run dist:mac      # universal DMG — run on macOS or CI
 npm run dist:linux    # AppImage + .deb + .rpm
+npm run tauri:build   # Tauri nsis / dmg / AppImage / deb / rpm (this OS)
 ```
 
-Windows `.exe` artifacts come from GitHub Actions, not from a Linux checkout.
+Windows `.exe` artifacts come from GitHub Actions, not from a Linux checkout. A Linux VM cannot emit a real Windows Tauri `.exe`; the `tauri` job on `windows-latest` does.
 
 ### macOS notarization
 
@@ -111,6 +128,12 @@ CI sets `CSC_IDENTITY_AUTO_DISCOVERY=false` and `mac.identity: null`, so the DMG
   <img src="docs/screenshots/home-narrow.png" alt="i hate pdf in a smaller window" width="520" />
   <br /><em>The same chrome, tightened for a smaller desktop window.</em>
 </p>
+
+---
+
+## TikTok
+
+9:16 stills (1080×1920) and overlay copy live in [`docs/marketing/tiktok/`](docs/marketing/tiktok/). Captions: [`docs/marketing/tiktok/CAPTIONS.md`](docs/marketing/tiktok/CAPTIONS.md). Wordmark in overlays: red lowercase **i**, then dark **hate pdf**.
 
 ---
 
@@ -224,6 +247,8 @@ Then:
 npm install
 npm run dev
 # packaged installers: npm run dist / dist:win / dist:mac / dist:linux
+# Tauri shell: npm run tauri:dev / npm run tauri:build
+# engine only (no window): npm run engine
 ```
 
 That starts:

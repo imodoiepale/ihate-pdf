@@ -6,6 +6,7 @@ import type { JobRequest, JobResult } from '@shared/types'
 import type { JobProgress } from '@shared/types'
 import { PARSER_LIBRARIES, mergeLibraryStatus, type LibraryRuntime } from '@shared/libraries'
 import { defaultTmp } from './paths'
+import { resourceFile } from './resources'
 import { ensureDir, parseRanges, resolvePython, rmQuiet, run, uniquePath, whichSync } from './run'
 import { BANK_SCHEMA, INVOICE_SCHEMA, MPESA_SCHEMA, anythingSchema, chat, parseJsonLoose } from './llm'
 import { resolveLlm } from './preferences'
@@ -15,9 +16,7 @@ export type ExtractKind = 'bank' | 'invoice' | 'mpesa' | 'anything'
 type Emit = (p: JobProgress) => void
 
 function extractPy(): string {
-  const packed = join(process.resourcesPath || '', 'extract.py')
-  if (existsSync(packed)) return packed
-  return join(process.cwd(), 'resources/extract.py')
+  return resourceFile('extract.py')
 }
 
 function py(): string {

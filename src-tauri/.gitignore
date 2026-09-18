@@ -1,0 +1,8 @@
+target/
+gen/
+WixTools/
+resources/engine/
+resources/pdf-tools/
+resources/node/
+icons/android/
+icons/ios/
