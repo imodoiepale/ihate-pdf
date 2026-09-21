@@ -3,12 +3,13 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { startApiServer } from './api'
 import { extraPath, refreshToolPath } from './run'
+import { PRODUCT_NAME } from '@shared/brand'
 import { RENDERER_PORT } from '@shared/types'
 
 refreshToolPath()
 process.env.PATH = extraPath()
 
-app.setName('i hate pdf')
+app.setName(PRODUCT_NAME)
 app.commandLine.appendSwitch('no-sandbox')
 app.commandLine.appendSwitch('disable-gpu-sandbox')
 app.commandLine.appendSwitch('disable-dev-shm-usage')
@@ -16,10 +17,19 @@ app.commandLine.appendSwitch('disable-dev-shm-usage')
 const API_ONLY = process.argv.includes('--api-only')
 
 function appIcon(): string | undefined {
-  const packed = join(process.resourcesPath || '', 'icon.png')
-  if (app.isPackaged && existsSync(packed)) return packed
-  const dev = join(__dirname, '../../build/icon.png')
-  return existsSync(dev) ? dev : undefined
+  const packedDir = process.resourcesPath || ''
+  const packedIco = join(packedDir, 'icon.ico')
+  const packedPng = join(packedDir, 'icon.png')
+  if (app.isPackaged) {
+    if (process.platform === 'win32' && existsSync(packedIco)) return packedIco
+    if (existsSync(packedPng)) return packedPng
+    if (existsSync(packedIco)) return packedIco
+  }
+  const devIco = join(__dirname, '../../build/icon.ico')
+  const devPng = join(__dirname, '../../build/icon.png')
+  if (process.platform === 'win32' && existsSync(devIco)) return devIco
+  if (existsSync(devPng)) return devPng
+  return existsSync(devIco) ? devIco : undefined
 }
 
 async function createWindow(): Promise<void> {
@@ -30,7 +40,7 @@ async function createWindow(): Promise<void> {
     minWidth: 760,
     minHeight: 600,
     backgroundColor: '#ffffff',
-    title: 'i hate pdf',
+    title: PRODUCT_NAME,
     ...(icon ? { icon } : {}),
     autoHideMenuBar: true,
     webPreferences: {
@@ -56,7 +66,7 @@ async function createWindow(): Promise<void> {
 async function boot(): Promise<void> {
   await startApiServer()
   if (API_ONLY) {
-    console.log(`i hate pdf API on http://127.0.0.1:43128 (renderer http://127.0.0.1:${RENDERER_PORT})`)
+    console.log(`${PRODUCT_NAME} API on http://127.0.0.1:43128 (renderer http://127.0.0.1:${RENDERER_PORT})`)
     return
   }
   await createWindow()

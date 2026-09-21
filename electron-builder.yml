@@ -38,14 +38,25 @@ extraResources:
     to: requirements-extract.txt
   - from: resources/bin
     to: bin
+  # Outside app.asar so powershell.exe -File / bash can execute them after install.
   - from: scripts/install-pending.sh
     to: scripts/install-pending.sh
   - from: scripts/install-pending.ps1
     to: scripts/install-pending.ps1
+  - from: scripts/install-deps.sh
+    to: scripts/install-deps.sh
+  - from: scripts/install-deps.ps1
+    to: scripts/install-deps.ps1
+  - from: scripts/install.sh
+    to: scripts/install.sh
+  - from: scripts/install.ps1
+    to: scripts/install.ps1
   - from: mcp
     to: mcp
   - from: build/icon.png
     to: icon.png
+  - from: build/icon.ico
+    to: icon.ico
 
 publish:
   provider: github

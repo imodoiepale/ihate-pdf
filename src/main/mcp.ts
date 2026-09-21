@@ -1,6 +1,7 @@
 import { resolve as resolvePath } from 'node:path'
 import { existsSync } from 'node:fs'
-import { defaultOutputDir, defaultTmp } from './paths'
+import { PRODUCT_SLUG } from '@shared/brand'
+import { defaultOutputDir, defaultTmp, legacyOutputDirs } from './paths'
 import { askParsed, extractEngines } from './extract'
 
 export const MCP_TOOLS = [
@@ -131,7 +132,7 @@ export async function handleMcpJsonRpc(
     return {
       protocolVersion: '2024-11-05',
       capabilities: { tools: {} },
-      serverInfo: { name: 'ihate-pdf', version: '1.0.0' }
+      serverInfo: { name: PRODUCT_SLUG, version: '1.0.0' }
     }
   }
   if (method === 'notifications/initialized' || method === 'notifications/cancelled') {
@@ -216,7 +217,7 @@ export async function handleMcpJsonRpc(
 
 export function isSafeIndexDir(dir: string, outputDir: string): boolean {
   const resolved = resolvePath(dir)
-  const roots = [outputDir, defaultTmp(), defaultOutputDir()].map((r) => resolvePath(r))
+  const roots = [outputDir, defaultTmp(), defaultOutputDir(), ...legacyOutputDirs()].map((r) => resolvePath(r))
   return existsSync(resolved) && roots.some((r) => resolved === r || resolved.startsWith(r + '/'))
 }
 

@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { delimiter, dirname, join } from 'node:path'
+import { PRODUCT_NAME } from '@shared/brand'
 
 function which(bin: string): string | null {
   const names = process.platform === 'win32' ? [bin, `${bin}.exe`, `${bin}.cmd`] : [bin]
@@ -69,7 +70,7 @@ export async function nativePickFiles(multi: boolean, extensions: string[]): Pro
     const script = `
 set out to ""
 try
-  set theFiles to choose file with prompt "i hate pdf"${typeLine}${multiLine}
+  set theFiles to choose file with prompt "${PRODUCT_NAME}"${typeLine}${multiLine}
   if class of theFiles is list then
     repeat with f in theFiles
       set out to out & POSIX path of f & linefeed
@@ -88,7 +89,7 @@ return out
     const script = `
 Add-Type -AssemblyName System.Windows.Forms
 $d = New-Object System.Windows.Forms.OpenFileDialog
-$d.Title = 'i hate pdf'
+$d.Title = '${PRODUCT_NAME}'
 $d.Multiselect = $${multi ? 'True' : 'False'}
 $d.Filter = '${filter.ps.replace(/'/g, "''")}'
 $r = $d.ShowDialog()
@@ -99,7 +100,7 @@ if ($r -eq [System.Windows.Forms.DialogResult]::OK) { $d.FileNames }
   }
   const zenity = which('zenity')
   if (zenity) {
-    const args = ['--file-selection', '--title=i hate pdf', '--separator=\n', ...filter.zenity]
+    const args = ['--file-selection', '--title=${PRODUCT_NAME}', '--separator=\n', ...filter.zenity]
     if (multi) args.push('--multiple')
     try {
       const { stdout, code } = await runCapture(zenity, args)
@@ -126,7 +127,7 @@ export async function nativePickDir(): Promise<string | null> {
     if (!osascript) return null
     const { stdout } = await runCapture(osascript, [
       '-e',
-      'try\nPOSIX path of (choose folder with prompt "i hate pdf")\nend try'
+      'try\nPOSIX path of (choose folder with prompt "${PRODUCT_NAME}")\nend try'
     ])
     return stdout.trim() || null
   }
@@ -135,7 +136,7 @@ export async function nativePickDir(): Promise<string | null> {
     const script = `
 Add-Type -AssemblyName System.Windows.Forms
 $d = New-Object System.Windows.Forms.FolderBrowserDialog
-$d.Description = 'i hate pdf'
+$d.Description = '${PRODUCT_NAME}'
 if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $d.SelectedPath }
 `
     const { stdout } = await runCapture(ps, ['-STA', '-NoProfile', '-Command', script])
@@ -143,7 +144,7 @@ if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $d.SelectedPa
   }
   const zenity = which('zenity')
   if (zenity) {
-    const { stdout, code } = await runCapture(zenity, ['--file-selection', '--directory', '--title=i hate pdf'])
+    const { stdout, code } = await runCapture(zenity, ['--file-selection', '--directory', '--title=${PRODUCT_NAME}'])
     if (code !== 0) return null
     return stdout.trim() || null
   }

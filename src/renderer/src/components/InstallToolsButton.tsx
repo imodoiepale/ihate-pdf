@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { apiPost } from '../lib/api'
 
 export function installHint(tool = 'This tool'): string {
-  return `${tool} is not installed yet. Core PDF tools (qpdf + Poppler) download automatically on first launch.`
+  return `${tool} is not installed yet. Use Settings → PDF tools → Install PDF tools, or wait for the first-launch download.`
 }
 
 export function InstallToolsButton({
@@ -21,6 +21,8 @@ export function InstallToolsButton({
   const [busy, setBusy] = useState(false)
   const [log, setLog] = useState<string | null>(null)
   const [ok, setOk] = useState<boolean | null>(null)
+  const [script, setScript] = useState<string | null>(null)
+  const status = busy ? 'running' : ok === true ? 'ok' : ok === false ? 'error' : 'idle'
 
   async function run() {
     setBusy(true)
@@ -30,11 +32,20 @@ export function InstallToolsButton({
       const data = await apiPost<{
         ok: boolean
         message: string
+        script?: string | null
         stdout?: string
         stderr?: string
+        command?: string
+        argv?: string[]
+        status?: string
       }>('/api/install-tools', full ? { full: true } : { vendorOnly })
       setOk(data.ok)
-      setLog(data.message || (data.ok ? 'Tools ready.' : 'Could not finish.'))
+      setScript(data.script || null)
+      const bits = [data.message]
+      if (data.script) bits.push(data.script)
+      if (!data.ok && data.stderr) bits.push(data.stderr.slice(-280))
+      else if (data.stdout) bits.push(data.stdout.trim().split('\n').slice(-4).join('\n'))
+      setLog(bits.filter(Boolean).join('\n'))
       onDone?.()
     } catch (e) {
       setOk(false)
@@ -45,15 +56,35 @@ export function InstallToolsButton({
   }
 
   return (
-    <div className={compact ? 'inline-flex items-center gap-2' : 'mt-3 text-left'}>
-      <button className="ilp-btn h-10 px-4 text-sm" disabled={busy} onClick={() => void run()}>
-        {busy ? 'Downloading…' : label || 'Download qpdf + Poppler'}
+    <div className={compact ? 'inline-flex flex-wrap items-center gap-2' : 'mt-3 text-left'}>
+      <button
+        type="button"
+        className="ilp-btn h-10 px-4 text-sm"
+        disabled={busy}
+        aria-busy={busy}
+        data-install-status={status}
+        onClick={() => void run()}
+      >
+        {busy ? 'Running…' : label || 'Install PDF tools'}
       </button>
+      {status !== 'idle' && (
+        <p
+          className={`text-xs font-semibold uppercase tracking-wide ${
+            status === 'running' ? 'text-ilp-muted' : status === 'ok' ? 'text-emerald-800' : 'text-[#5c1a16]'
+          } ${compact ? '' : 'mt-2'}`}
+          data-testid="install-tools-status"
+        >
+          {status === 'running' ? 'Status: running' : status === 'ok' ? 'Status: ok' : 'Status: error'}
+        </p>
+      )}
       {busy && !compact && (
-        <p className="mt-2 text-xs text-ilp-muted">Downloading PDF tools…</p>
+        <p className="mt-2 text-xs text-ilp-muted">Silent vendor install (qpdf + Poppler). No wizard.</p>
+      )}
+      {script && !compact && (
+        <p className="mt-2 break-all font-mono text-[11px] text-ilp-muted">{script}</p>
       )}
       {log && !compact && (
-        <p className={`mt-2 text-xs ${ok === false ? 'text-[#5c1a16]' : 'text-[#5c5c66]'}`}>{log}</p>
+        <p className={`mt-2 whitespace-pre-wrap text-xs ${ok === false ? 'text-[#5c1a16]' : 'text-[#5c5c66]'}`}>{log}</p>
       )}
     </div>
   )

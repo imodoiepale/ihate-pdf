@@ -1,18 +1,40 @@
 import { spawn } from 'node:child_process'
 import { chmodSync, existsSync } from 'node:fs'
-import { scriptFile, userVendorRoot } from './resources'
+import { PRODUCT_NAME } from '@shared/brand'
+import { installInvocation } from './script-paths'
+import {
+  bundledInstallScripts,
+  resolveInstallScript,
+  userVendorRoot
+} from './resources'
 import { extraLibPath, extraPath, refreshToolPath, whichSync } from './run'
 import { ensureVendorTools } from './vendor'
 
 export interface InstallToolsResult {
   ok: boolean
+  status: 'ok' | 'error'
   code: number | null
   stdout: string
   stderr: string
   script: string | null
+  command: string
+  argv: string[]
   vendorOnly: boolean
   binaries: Record<string, string | null>
   message: string
+}
+
+export interface InstallToolsInfo {
+  inFlight: boolean
+  script: string | null
+  exists: boolean
+  name: string
+  packaged: boolean
+  resourcesPath: string | null
+  command: string
+  argv: string[]
+  vendorOnlyDefault: true
+  bundled: Array<{ name: string; path: string | null; exists: boolean }>
 }
 
 let inflight: Promise<InstallToolsResult> | null = null
@@ -32,7 +54,8 @@ function spawnCapture(cmd: string, args: string[], env: NodeJS.ProcessEnv, timeo
   return new Promise((resolve) => {
     const child = spawn(cmd, args, {
       env,
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true
     })
     let stdout = ''
     let stderr = ''
@@ -58,10 +81,41 @@ function spawnCapture(cmd: string, args: string[], env: NodeJS.ProcessEnv, timeo
   })
 }
 
+function spawnCommand(isWin: boolean, preferred: string): string {
+  if (!isWin) return 'bash'
+  if (preferred && existsSync(preferred)) return preferred
+  return 'powershell.exe'
+}
+
+export function installToolsInfo(opts: { vendorOnly?: boolean; full?: boolean } = {}): InstallToolsInfo {
+  const vendorOnly = resolveVendorOnly(opts)
+  const resolved = resolveInstallScript()
+  const inv = installInvocation({
+    platform: process.platform,
+    script: resolved.path,
+    vendorOnly
+  })
+  return {
+    inFlight: inflight !== null,
+    script: resolved.path,
+    exists: resolved.exists,
+    name: resolved.name,
+    packaged: resolved.packaged,
+    resourcesPath: resolved.resourcesPath || null,
+    command: spawnCommand(process.platform === 'win32', inv.command),
+    argv: inv.argv,
+    vendorOnlyDefault: true,
+    bundled: bundledInstallScripts()
+  }
+}
+
 async function runScript(vendorOnly: boolean): Promise<InstallToolsResult> {
   refreshToolPath()
   const isWin = process.platform === 'win32'
-  const script = scriptFile(isWin ? 'install-pending.ps1' : 'install-pending.sh')
+  const resolved = resolveInstallScript()
+  const script = resolved.path
+  const inv = installInvocation({ platform: process.platform, script, vendorOnly })
+  const command = spawnCommand(isWin, inv.command)
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     PATH: extraPath(),
@@ -88,25 +142,12 @@ async function runScript(vendorOnly: boolean): Promise<InstallToolsResult> {
 
   if (script && existsSync(script)) {
     const timeoutMs = vendorOnly ? 8 * 60_000 : 25 * 60_000
-    const ran = isWin
-      ? await spawnCapture(
-          'powershell',
-          [
-            '-NoProfile',
-            '-ExecutionPolicy',
-            'Bypass',
-            '-File',
-            script,
-            ...(vendorOnly ? ['-VendorOnly'] : ['-Full'])
-          ],
-          env,
-          timeoutMs
-        )
-      : await spawnCapture('bash', [script, ...(vendorOnly ? ['--vendor-only'] : ['--full'])], env, timeoutMs)
+    const ran = await spawnCapture(command, inv.argv, env, timeoutMs)
     stdout = ran.stdout
     stderr = ran.stderr
     code = ran.code
   } else {
+    stderr = `Bundled install script not found (${resolved.name}). Looked under process.resourcesPath/scripts and app.getAppPath().`
     const vendor = await ensureVendorTools()
     stdout = vendor.message
     code = 0
@@ -127,12 +168,47 @@ async function runScript(vendorOnly: boolean): Promise<InstallToolsResult> {
   const message = ok
     ? `Tools ready. qpdf=${binaries.qpdf || 'missing'} pdftotext=${binaries.pdftotext || 'missing'}`
     : `PDF tools missing. qpdf=${binaries.qpdf || 'MISSING'} pdftotext=${binaries.pdftotext || 'MISSING'}`
-  return { ok, code, stdout, stderr, script, vendorOnly, binaries, message }
+  return {
+    ok,
+    status: ok ? 'ok' : 'error',
+    code,
+    stdout,
+    stderr,
+    script,
+    command,
+    argv: inv.argv,
+    vendorOnly,
+    binaries,
+    message
+  }
 }
 
 function resolveVendorOnly(opts: { vendorOnly?: boolean; full?: boolean }): boolean {
   if (opts.full === true) return false
   return opts.vendorOnly !== false
+}
+
+export function previewInstallTools(opts: { vendorOnly?: boolean; full?: boolean } = {}): InstallToolsResult {
+  const vendorOnly = resolveVendorOnly(opts)
+  const info = installToolsInfo({ vendorOnly, full: opts.full })
+  refreshToolPath()
+  const binaries = coreBins()
+  const ok = info.exists
+  return {
+    ok,
+    status: ok ? 'ok' : 'error',
+    code: ok ? 0 : 1,
+    stdout: '',
+    stderr: ok ? '' : `Bundled install script not found (${info.name})`,
+    script: info.script,
+    command: info.command,
+    argv: info.argv,
+    vendorOnly,
+    binaries,
+    message: ok
+      ? `Would run ${info.command} ${info.argv.join(' ')}`
+      : `Bundled ${info.name} is not on the packaged resource path`
+  }
 }
 
 export function runInstallPending(opts: { vendorOnly?: boolean; full?: boolean } = {}): Promise<InstallToolsResult> {
@@ -161,6 +237,6 @@ export function maybeEnsureVendorInBackground(): void {
   refreshToolPath()
   if (whichSync('qpdf') && whichSync('pdftotext')) return
   void runInstallPending({ vendorOnly: true }).catch((err) => {
-    console.warn('i hate pdf vendor ensure:', err)
+    console.warn(`${PRODUCT_NAME} vendor ensure:`, err)
   })
 }

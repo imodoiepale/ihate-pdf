@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { PRODUCT_NAME } from '@shared/brand'
 import { GROUPS, TOOLS } from '@shared/tools'
 import { Logo } from './Logo'
 
@@ -31,7 +32,7 @@ export function Footer() {
         ))}
       </div>
       <div className="mx-auto mt-10 flex max-w-[1180px] flex-col gap-2 px-5 text-[12px] text-[#8a8a93] sm:flex-row sm:items-center sm:justify-between">
-        <p>i hate pdf processes files locally with qpdf, Ghostscript, Poppler, LibreOffice, and Tesseract.</p>
+        <p>{PRODUCT_NAME} processes files locally with qpdf, Ghostscript, Poppler, LibreOffice, and Tesseract.</p>
         <p>
           <Link to="/settings" className="hover:text-ilp-red">
             Settings

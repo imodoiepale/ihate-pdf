@@ -122,7 +122,14 @@ function stagePdfTools() {
   if (existsSync(mcpSrc)) cpSync(mcpSrc, join(dir, 'mcp'), { recursive: true })
   const scriptsDir = join(dir, 'scripts')
   mkdirSync(scriptsDir, { recursive: true })
-  for (const name of ['install-pending.sh', 'install-pending.ps1']) {
+  for (const name of [
+    'install-pending.sh',
+    'install-pending.ps1',
+    'install-deps.sh',
+    'install-deps.ps1',
+    'install.sh',
+    'install.ps1'
+  ]) {
     const src = join(root, 'scripts', name)
     if (existsSync(src)) cpSync(src, join(scriptsDir, name))
   }

@@ -1,11 +1,40 @@
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { PRODUCT_SLUG } from '@shared/brand'
+import { getElectron } from './optional-electron'
+import {
+  BUNDLED_INSTALL_SCRIPTS,
+  installScriptName,
+  scriptFileCandidates
+} from './script-paths'
+
+export { BUNDLED_INSTALL_SCRIPTS, installScriptName, scriptFileCandidates } from './script-paths'
 
 type ProcessWithResources = NodeJS.Process & { resourcesPath?: string }
 
-function packedResources(): string {
+export function packedResources(): string {
   return (process as ProcessWithResources).resourcesPath || ''
+}
+
+export function isPackagedApp(): boolean {
+  if (process.env.IHATEPDF_PACKAGED === '1' || process.env.IHATEPDF_PACKAGED === 'true') return true
+  try {
+    const packed = getElectron()?.app?.isPackaged
+    if (typeof packed === 'boolean') return packed
+  } catch {
+    /* node engine / tests */
+  }
+  const resources = packedResources()
+  return Boolean(resources && existsSync(join(resources, 'app.asar')))
+}
+
+function electronAppPath(): string {
+  try {
+    return getElectron()?.app?.getAppPath() || ''
+  } catch {
+    return ''
+  }
 }
 
 /** linux-x64 / linux-arm64 / win-x64 / win-arm64 / mac-arm64 / mac-x64 */
@@ -25,13 +54,13 @@ export function vendorPlatformKey(): string {
 export function userVendorRoot(): string {
   if (process.env.IHATEPDF_VENDOR_ROOT) return process.env.IHATEPDF_VENDOR_ROOT
   if (process.platform === 'darwin') {
-    return join(homedir(), 'Library', 'Application Support', 'ihate-pdf')
+    return join(homedir(), 'Library', 'Application Support', PRODUCT_SLUG)
   }
   if (process.platform === 'win32') {
     const local = process.env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local')
-    return join(local, 'ihate-pdf')
+    return join(local, PRODUCT_SLUG)
   }
-  return join(homedir(), '.local', 'share', 'ihate-pdf')
+  return join(homedir(), '.local', 'share', PRODUCT_SLUG)
 }
 
 export function userVendorBinDir(): string {
@@ -79,20 +108,51 @@ export function resourceFile(...parts: string[]): string {
   return join(process.cwd(), 'resources', ...parts)
 }
 
+export function scriptLookupOpts(name: string) {
+  return {
+    name,
+    resourcesPath: packedResources(),
+    cwd: process.cwd(),
+    packaged: isPackagedApp(),
+    appPath: electronAppPath(),
+    envResources: process.env.IHATEPDF_RESOURCES || '',
+    extraDirs: resourceRoots()
+  }
+}
+
 export function scriptFile(name: string): string | null {
-  const packed = packedResources()
-  const cwd = process.cwd()
-  const candidates = [
-    join(cwd, 'scripts', name),
-    ...resourceRoots().map((root) => join(root, 'scripts', name)),
-    ...resourceRoots().map((root) => join(root, name)),
-    packed ? join(packed, 'scripts', name) : '',
-    join(cwd, 'resources', 'scripts', name)
-  ]
-  for (const p of candidates) {
+  for (const p of scriptFileCandidates(scriptLookupOpts(name))) {
     if (p && existsSync(p)) return p
   }
   return null
+}
+
+export function bundledInstallScripts(): Array<{ name: string; path: string | null; exists: boolean }> {
+  return BUNDLED_INSTALL_SCRIPTS.map((name) => {
+    const path = scriptFile(name)
+    return { name, path, exists: Boolean(path) }
+  })
+}
+
+export function resolveInstallScript(platform: NodeJS.Platform | string = process.platform): {
+  name: string
+  path: string | null
+  exists: boolean
+  packaged: boolean
+  resourcesPath: string
+  candidates: string[]
+} {
+  const name = installScriptName(platform)
+  const candidates = scriptFileCandidates(scriptLookupOpts(name))
+  const path = scriptFile(name)
+  return {
+    name,
+    path,
+    exists: Boolean(path),
+    packaged: isPackagedApp(),
+    resourcesPath: packedResources(),
+    candidates
+  }
 }
 
 function pythonUserBins(): string[] {
@@ -136,8 +196,8 @@ export function extraResourceBinDirs(): string[] {
     userVendorBinDir(),
     join(userVendorRoot(), plat, 'bin'),
     join(userVendorRoot(), plat),
-    join(home, '.ihate-pdf', 'bin'),
-    localApp ? join(localApp, 'ihate-pdf', 'bin') : ''
+    join(home, `.${PRODUCT_SLUG}`, 'bin'),
+    localApp ? join(localApp, PRODUCT_SLUG, 'bin') : ''
   ]
   const system = [
     ...pythonUserBins(),
@@ -171,11 +231,11 @@ export function extraResourceLibDirs(): string[] {
     [
       userVendorLibDir(),
       join(userVendorRoot(), plat, 'lib'),
-      join(home, '.ihate-pdf', 'lib'),
+      join(home, `.${PRODUCT_SLUG}`, 'lib'),
       ...fromResources
     ].filter(Boolean)
   )
 }
 
 export const INSTALL_PENDING_HINT =
-  'The app downloads qpdf and Poppler into the vendor folder on first launch (~/.local/share/ihate-pdf/bin, %LOCALAPPDATA%\\ihate-pdf\\bin, or ~/Library/Application Support/ihate-pdf/bin).'
+  'Use Settings → PDF tools → Install PDF tools (bundled install-pending script, vendor qpdf + Poppler). First launch does the same in the background.'

@@ -31,7 +31,8 @@
     "tauri:dev": "npm run build:engine && tauri dev",
     "tauri:build": "tauri build",
     "icons": "python3 scripts/generate-icons.py",
-    "smoke": "node scripts/smoke-pdf.mjs",
+    "test:scripts": "node scripts/test-packaged-scripts.mjs",
+    "test:install-pending": "node scripts/test-install-pending.mjs",
     "test:engine": "node scripts/smoke-pdf.mjs",
     "test:extract": "node scripts/test-extract.mjs",
     "mcp": "node mcp/ihate-pdf-mcp.mjs"

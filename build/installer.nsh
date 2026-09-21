@@ -8,7 +8,9 @@
   FileWrite $0 "  2) %LOCALAPPDATA%\ihate-pdf\bin$\r$\n"
   FileWrite $0 "  3) PATH$\r$\n"
   FileWrite $0 "$\r$\n"
-  FileWrite $0 "First launch downloads qpdf + Poppler into LocalAppData.$\r$\n"
+  FileWrite $0 "The app ships resources\scripts\install-pending.ps1.$\r$\n"
+  FileWrite $0 "Settings → PDF tools → Install PDF tools runs it (silent qpdf + Poppler).$\r$\n"
+  FileWrite $0 "First launch does the same in the background.$\r$\n"
   FileWrite $0 "https://github.com/imodoiepale/ihate-pdf$\r$\n"
   FileClose $0
 !macroend

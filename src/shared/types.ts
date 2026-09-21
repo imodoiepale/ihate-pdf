@@ -134,6 +134,18 @@ export interface EngineStatus {
   extract?: Record<string, boolean | string>
   vendor?: { bin: string; platform: string }
   vendorInstall?: { inFlight: boolean }
+  installTools?: {
+    inFlight: boolean
+    script: string | null
+    exists: boolean
+    name: string
+    packaged: boolean
+    resourcesPath: string | null
+    command: string
+    argv: string[]
+    vendorOnlyDefault: boolean
+    bundled?: Array<{ name: string; path: string | null; exists: boolean }>
+  }
   llm?: {
     defaultProvider: string | null
     configured: string[]

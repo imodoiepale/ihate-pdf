@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
+import { PRODUCT_NAME } from '@shared/brand'
 import { TOOLS } from '@shared/tools'
 import { Logo } from './Logo'
 import { ToolIcon } from './ToolIcon'
@@ -45,7 +46,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-[#efeef3] bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex h-[58px] max-w-[1180px] items-center justify-between gap-4 px-4 sm:px-5">
-        <Link to="/" className="shrink-0" aria-label="i hate pdf home">
+        <Link to="/" className="shrink-0" aria-label={`${PRODUCT_NAME} home`}>
           <Logo />
         </Link>
 

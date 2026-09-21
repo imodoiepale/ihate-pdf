@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '@shared/brand'
 import type { LlmProviderId } from '@shared/preferences'
 import { resolveLlm } from './preferences'
 import { maskError } from './secrets'
@@ -127,7 +128,7 @@ export async function chat(
           resolved,
           messages,
           opts,
-          resolved.id === 'openrouter' ? { 'HTTP-Referer': 'http://127.0.0.1:43127', 'X-Title': 'i hate pdf' } : {}
+          resolved.id === 'openrouter' ? { 'HTTP-Referer': 'http://127.0.0.1:43127', 'X-Title': PRODUCT_NAME } : {}
         )
   return { text, provider: resolved.id, model: resolved.model }
 }

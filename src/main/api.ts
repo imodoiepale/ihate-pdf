@@ -1,9 +1,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { randomUUID } from 'node:crypto'
-import { createWriteStream, existsSync, statSync } from 'node:fs'
+import { createWriteStream, existsSync, readFileSync, statSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { EventEmitter } from 'node:events'
+import { PRODUCT_NAME, PRODUCT_SLUG } from '@shared/brand'
 import type { LlmProviderId } from '@shared/preferences'
 import { API_PORT, type EngineStatus, type FileRef, type JobRequest, type JobResult } from '@shared/types'
 import { detectBinaries, engineStatus } from './pdfinfo'
@@ -21,11 +22,22 @@ import {
 import { testProvider } from './llm'
 import { handleMcpJsonRpc, isSafeIndexDir, MCP_TOOLS } from './mcp'
 import { ensureDir, extraPath, formatBytes, refreshToolPath } from './run'
-import { maybeEnsureVendorInBackground, runInstallPending, vendorInstallInFlight } from './install-tools'
+import {
+  installToolsInfo,
+  maybeEnsureVendorInBackground,
+  previewInstallTools,
+  runInstallPending,
+  vendorInstallInFlight
+} from './install-tools'
 import { userVendorBinDir, vendorPlatformKey } from './resources'
 
-const bus = new EventEmitter()
-bus.setMaxListeners(100)
+function appVersion(): string {
+  try {
+    return JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8')).version as string
+  } catch {
+    return '0.0.0'
+  }
+}
 
 let outputDir = defaultOutputDir()
 let concurrency = 2
@@ -128,7 +140,7 @@ export async function startApiServer(port = API_PORT): Promise<void> {
   })
   return new Promise((resolve, reject) => {
     server.listen(port, '127.0.0.1', () => {
-      console.log(`i hate pdf engine listening on http://127.0.0.1:${port}`)
+      console.log(`${PRODUCT_NAME} engine listening on http://127.0.0.1:${port}`)
       resolve()
     })
     server.on('error', reject)
@@ -145,7 +157,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   const url = new URL(req.url || '/', 'http://127.0.0.1')
   try {
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      send(res, 200, { ok: true, product: 'i hate pdf' })
+      send(res, 200, { ok: true, product: PRODUCT_NAME, slug: PRODUCT_SLUG, version: appVersion() })
       return
     }
     if (req.method === 'GET' && url.pathname === '/api/settings') {
@@ -168,6 +180,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
           platform: vendorPlatformKey()
         },
         vendorInstall: { inFlight: vendorInstallInFlight() },
+        installTools: installToolsInfo(),
         llm: {
           defaultProvider: prefs.defaultProvider,
           configured: Object.values(prefs.providers)
@@ -183,8 +196,17 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       send(res, 200, detectBinaries())
       return
     }
+    if (req.method === 'GET' && url.pathname === '/api/install-tools') {
+      send(res, 200, installToolsInfo())
+      return
+    }
     if (req.method === 'POST' && url.pathname === '/api/install-tools') {
-      const body = await json<{ vendorOnly?: boolean; full?: boolean }>(req)
+      const body = await json<{ vendorOnly?: boolean; full?: boolean; dryRun?: boolean }>(req)
+      if (body.dryRun) {
+        const preview = previewInstallTools({ vendorOnly: body.vendorOnly, full: body.full })
+        send(res, preview.ok ? 200 : 207, { ...preview, dryRun: true })
+        return
+      }
       const result = await runInstallPending({ vendorOnly: body.vendorOnly, full: body.full })
       send(res, result.ok ? 200 : 207, result)
       return
@@ -308,7 +330,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
         return
       }
       if (!isSafeIndexDir(body.indexDir, outputDir)) {
-        send(res, 400, { error: 'indexDir is not an i hate pdf output folder' })
+        send(res, 400, { error: `indexDir is not an ${PRODUCT_NAME} output folder` })
         return
       }
       send(res, 200, await askParsed(body.indexDir, body.question, { useLlm: body.useLlm === true || body.useLlm === 'true', provider: body.provider }))
@@ -316,12 +338,12 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     }
     if ((req.method === 'GET' || req.method === 'POST') && (url.pathname === '/mcp' || url.pathname === '/api/mcp')) {
       if (!isMcpEnabled()) {
-        send(res, 404, { error: 'MCP is disabled. Enable it in i hate pdf Settings.' })
+        send(res, 404, { error: `MCP is disabled. Enable it in ${PRODUCT_NAME} Settings.` })
         return
       }
       if (req.method === 'GET') {
         send(res, 200, {
-          name: 'ihate-pdf',
+          name: PRODUCT_SLUG,
           protocol: 'json-rpc',
           tools: MCP_TOOLS,
           stdio: 'node mcp/ihate-pdf-mcp.mjs',

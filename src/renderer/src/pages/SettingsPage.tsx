@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { LLM_PROVIDERS, PROVIDER_META, type LlmProviderId, type StudioPreferencesPublic } from '@shared/preferences'
 import type { LibraryRuntime } from '@shared/libraries'
 import { apiGet, apiPost } from '../lib/api'
+import { PRODUCT_NAME } from '@shared/brand'
 import { Wordmark } from '../components/Wordmark'
 import { InstallToolsButton } from '../components/InstallToolsButton'
 
-type Tab = 'workspace' | 'providers' | 'parsers' | 'mcp' | 'about'
+type Tab = 'workspace' | 'providers' | 'parsers' | 'tools' | 'mcp' | 'about'
 
 export function SettingsPage() {
   const [tab, setTab] = useState<Tab>('providers')
@@ -51,6 +52,7 @@ export function SettingsPage() {
           {(
             [
               ['providers', 'API keys'],
+              ['tools', 'PDF tools'],
               ['parsers', 'Parsers'],
               ['workspace', 'Workspace'],
               ['mcp', 'MCP'],
@@ -119,6 +121,8 @@ export function SettingsPage() {
         {!loading && prefs && tab === 'workspace' && (
           <WorkspacePanel prefs={prefs} onPatch={patch} />
         )}
+
+        {tab === 'tools' && <PdfToolsPanel />}
 
         {tab === 'parsers' && <ParsersPanel />}
 
@@ -302,34 +306,11 @@ function WorkspacePanel({
   onPatch: (body: Record<string, unknown>, toast?: string) => Promise<void>
 }) {
   const [concurrency, setConcurrency] = useState(String(prefs.concurrency))
-  const [bins, setBins] = useState<Record<string, string | null> | null>(null)
-  const [vendor, setVendor] = useState<string>('')
-
-  async function loadBins() {
-    try {
-      const data = await apiGet<{
-        binaries: Record<string, string | null>
-        vendor?: { bin: string }
-      }>('/api/status')
-      setBins(data.binaries)
-      setVendor(data.vendor?.bin || '')
-    } catch {
-      setBins(null)
-    }
-  }
-
-  useEffect(() => {
-    void loadBins()
-  }, [])
 
   async function chooseOut() {
     const data = await apiPost<{ path: string | null }>('/api/pick-dir', {})
     if (data.path) await onPatch({ outputDir: data.path }, 'Output folder updated')
   }
-
-  const missing = bins
-    ? ['qpdf', 'pdftotext', 'pdfinfo', 'pdftoppm', 'pdfimages', 'python3'].filter((n) => !bins[n])
-    : []
 
   return (
     <div className="space-y-4">
@@ -358,13 +339,87 @@ function WorkspacePanel({
           </button>
         </div>
       </div>
-      <div className="surface p-5">
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-ilp-muted">Local PDF tools</p>
-        <p className="mt-1 text-[13px] text-[#5c5c66]">
-          Merge and analyze need qpdf and Poppler. First launch downloads them into the vendor folder in the
-          background.
+      <p className="text-[13px] text-ilp-muted">
+        qpdf and Poppler: see <span className="font-semibold text-ilp-dark">PDF tools</span>.
+      </p>
+    </div>
+  )
+}
+
+function PdfToolsPanel() {
+  const [bins, setBins] = useState<Record<string, string | null> | null>(null)
+  const [vendor, setVendor] = useState<string>('')
+  const [install, setInstall] = useState<{
+    script: string | null
+    exists: boolean
+    name: string
+    command: string
+    argv: string[]
+    packaged: boolean
+    inFlight: boolean
+  } | null>(null)
+
+  async function loadBins() {
+    try {
+      const data = await apiGet<{
+        binaries: Record<string, string | null>
+        vendor?: { bin: string }
+        installTools?: {
+          script: string | null
+          exists: boolean
+          name: string
+          command: string
+          argv: string[]
+          packaged: boolean
+          inFlight: boolean
+        }
+      }>('/api/status')
+      setBins(data.binaries)
+      setVendor(data.vendor?.bin || '')
+      setInstall(data.installTools || null)
+    } catch {
+      setBins(null)
+    }
+  }
+
+  useEffect(() => {
+    void loadBins()
+    const t = window.setInterval(() => void loadBins(), 2000)
+    return () => window.clearInterval(t)
+  }, [])
+
+  const missing = bins
+    ? ['qpdf', 'pdftotext', 'pdfinfo', 'pdftoppm', 'pdfimages', 'python3'].filter((n) => !bins[n])
+    : []
+
+  return (
+    <div className="space-y-4">
+      <header>
+        <h2 className="text-[18px] font-extrabold tracking-tight text-ilp-dark">PDF tools</h2>
+        <p className="mt-1 text-[13.5px] leading-relaxed text-[#5c5c66]">
+          The packaged app ships <span className="font-mono text-[12.5px]">install-pending.ps1</span> (Windows) and{' '}
+          <span className="font-mono text-[12.5px]">install-pending.sh</span> (Mac/Linux). This button runs that bundled
+          script — silent vendor qpdf + Poppler, no installer wizard. LibreOffice and Tesseract stay optional.
         </p>
-        {vendor && <p className="mt-2 break-all font-mono text-[12px] text-ilp-muted">{vendor}</p>}
+      </header>
+      <div className="surface p-5">
+        <p className="text-[12px] font-semibold uppercase tracking-wide text-ilp-muted">Bundled installer</p>
+        {install?.inFlight && (
+          <p className="mt-2 text-[13px] font-semibold text-ilp-muted">Status: running</p>
+        )}
+        {install?.script ? (
+          <p className="mt-2 break-all font-mono text-[12px] text-ilp-dark" data-testid="bundled-install-script">
+            {install.script}
+          </p>
+        ) : (
+          <p className="mt-2 text-[13px] text-amber-800">Bundled script not found on this install.</p>
+        )}
+        {install?.command && (
+          <p className="mt-2 break-all font-mono text-[11px] text-ilp-muted">
+            {install.command} {install.argv.join(' ')}
+          </p>
+        )}
+        {vendor && <p className="mt-2 break-all font-mono text-[12px] text-ilp-muted">Vendor: {vendor}</p>}
         {bins && (
           <ul className="mt-3 grid gap-1 text-[13px] sm:grid-cols-2">
             {['qpdf', 'pdftotext', 'pdfinfo', 'pdftoppm', 'pdfimages', 'python3', 'gs', 'img2pdf', 'tesseract', 'soffice', 'zip'].map(
@@ -379,11 +434,11 @@ function WorkspacePanel({
         {missing.length > 0 && (
           <p className="mt-3 text-[13px] text-amber-800">Missing: {missing.join(', ')}</p>
         )}
-        <InstallToolsButton onDone={() => void loadBins()} />
+        <InstallToolsButton label="Install PDF tools" onDone={() => void loadBins()} />
         <div className="mt-3">
           <InstallToolsButton full label="Install optional tools" onDone={() => void loadBins()} compact />
         </div>
-        <p className="mt-2 text-[12px] text-ilp-muted">LibreOffice, Tesseract, and Ghostscript stay optional.</p>
+        <p className="mt-2 text-[12px] text-ilp-muted">Optional path uses --full (LibreOffice, Tesseract, Ghostscript).</p>
       </div>
     </div>
   )
@@ -451,7 +506,7 @@ function AboutPanel() {
       </h2>
       <div className="surface p-5 text-[14px] leading-relaxed text-[#5c5c66]">
         <p>
-          i hate pdf is an independent, open-source desktop PDF toolbox. It is not affiliated with, endorsed
+          {PRODUCT_NAME} is an independent, open-source desktop PDF toolbox. It is not affiliated with, endorsed
           by, or a substitute name for iLovePDF.
         </p>
         <p className="mt-3">
