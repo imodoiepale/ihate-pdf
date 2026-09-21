@@ -82,7 +82,7 @@ def page_count(pdf: str) -> int:
         return int(out.strip() or "0")
     raise RuntimeError(
         "Neither PyMuPDF, pdfinfo, nor qpdf is available. "
-        "Run scripts/install-pending.sh or scripts/install-pending.ps1."
+        "qpdf and Poppler download on first launch into the vendor folder."
     )
 
 
@@ -164,10 +164,7 @@ def pdftotext_window(pdf: str, first: int, last: int) -> str:
     if not bin_:
         raise RuntimeError(
             "pdftotext is not installed. Analyze/extract needs Poppler. "
-            "Run scripts/install-pending.sh or scripts/install-pending.ps1 "
-            "(or Settings → Install missing tools). The app also searches "
-            "~/.local/share/ihate-pdf/bin, %LOCALAPPDATA%\\ihate-pdf\\bin, "
-            "and ~/Library/Application Support/ihate-pdf/bin."
+            "The app downloads it on first launch into the vendor folder."
         )
     return run([bin_, "-layout", "-f", str(first), "-l", str(last), pdf, "-"], timeout=180)
 

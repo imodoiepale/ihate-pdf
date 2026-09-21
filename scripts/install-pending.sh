@@ -1,26 +1,28 @@
 #!/usr/bin/env bash
-# i hate pdf — install only missing PDF engine tools (idempotent, non-interactive).
-# Detects: qpdf, poppler (pdftotext/pdfinfo/pdftoppm/pdfimages), python3, pymupdf,
-# pdfplumber, pypdf, ghostscript, img2pdf, tesseract, libreoffice, zip.
+# i hate pdf — install missing PDF engine tools (idempotent, non-interactive).
+# Default is vendor-only: official qpdf zip + Poppler into the user vendor dir.
+# Pass --full to also apt/dnf/pacman/brew LibreOffice, Tesseract, Ghostscript, Python extras.
 #
-# Portable Apache-2.0 qpdf (and Linux Poppler via apt-get download) land in the
-# user vendor dir so AppImage / packaged apps find them without a terminal restart:
+# Portable Apache-2.0 qpdf (and Linux Poppler via apt-get download) land in:
 #   Linux:  ~/.local/share/ihate-pdf/{bin,lib}
 #   macOS:  ~/Library/Application Support/ihate-pdf/{bin,lib}
 #
 # Usage:
-#   ./scripts/install-pending.sh
-#   ./scripts/install-pending.sh --vendor-only   # no sudo / no optional desktop apps
+#   ./scripts/install-pending.sh              # vendor-only (qpdf + poppler)
+#   ./scripts/install-pending.sh --vendor-only
+#   ./scripts/install-pending.sh --full       # optional desktop CLIs via the package manager
 set -u
 
-VENDOR_ONLY=0
+VENDOR_ONLY=1
 DRY_RUN=0
 for arg in "$@"; do
   case "$arg" in
     --vendor-only|-VendorOnly) VENDOR_ONLY=1 ;;
+    --full) VENDOR_ONLY=0 ;;
     --dry-run) DRY_RUN=1 ;;
     -h|--help)
-      echo "Usage: $0 [--vendor-only] [--dry-run]"
+      echo "Usage: $0 [--vendor-only] [--full] [--dry-run]"
+      echo "  Default: vendor-only (qpdf zip + Poppler). --full also installs LibreOffice/tesseract/ghostscript."
       exit 0
       ;;
   esac
@@ -475,9 +477,11 @@ else
   note_skipped "poppler"
 fi
 
-# python3
+# python3 (optional unless --full)
 if bin_ok python3 || bin_ok python; then
   note_skipped "python3"
+elif [[ "$VENDOR_ONLY" -eq 1 ]]; then
+  note_skipped "python3 (optional, vendor-only)"
 else
   note_failed "python3" "install Python 3 from python.org or your package manager"
 fi
@@ -506,7 +510,7 @@ install_pip_req() {
   return 1
 }
 
-if [[ "$DRY_RUN" -eq 0 ]] && (bin_ok python3 || bin_ok python); then
+if [[ "$VENDOR_ONLY" -eq 0 ]] && [[ "$DRY_RUN" -eq 0 ]] && (bin_ok python3 || bin_ok python); then
   NEED_PY=0
   py_mod fitz || NEED_PY=1
   py_mod pdfplumber || NEED_PY=1
@@ -527,6 +531,8 @@ if [[ "$DRY_RUN" -eq 0 ]] && (bin_ok python3 || bin_ok python); then
     note_skipped "pdfplumber"
     note_skipped "pypdf"
   fi
+elif [[ "$VENDOR_ONLY" -eq 1 ]]; then
+  echo "  skipped:   python extras (optional, vendor-only)"
 fi
 
 if bin_ok gs; then note_skipped "ghostscript"

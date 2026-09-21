@@ -3,19 +3,19 @@ import { Link } from 'react-router-dom'
 import { GROUPS, TOOLS } from '@shared/tools'
 import { Wordmark } from '../components/Wordmark'
 import { ToolCard } from '../components/ToolCard'
-import { Callout } from '../components/Callout'
-import { InstallToolsButton } from '../components/InstallToolsButton'
 import { apiGet } from '../lib/api'
 
 export function HomePage() {
-  const [missingCore, setMissingCore] = useState(false)
+  const [vendorBusy, setVendorBusy] = useState(false)
 
   function checkBins() {
-    apiGet<{ binaries: Record<string, string | null>; extract?: Record<string, boolean | string> }>('/api/status')
+    apiGet<{
+      binaries: Record<string, string | null>
+      extract?: Record<string, boolean | string>
+      vendorInstall?: { inFlight: boolean }
+    }>('/api/status')
       .then((s) => {
-        const qpdf = Boolean(s.binaries.qpdf)
-        const parse = Boolean(s.binaries.pdftotext) || Boolean(s.extract?.pymupdf)
-        setMissingCore(!qpdf || !parse)
+        setVendorBusy(Boolean(s.vendorInstall?.inFlight))
       })
       .catch(() => {
         /* engine may still be starting */
@@ -24,20 +24,18 @@ export function HomePage() {
 
   useEffect(() => {
     checkBins()
+    const t = window.setInterval(() => {
+      checkBins()
+    }, 2000)
+    return () => window.clearInterval(t)
   }, [])
+
+  const showLine = vendorBusy
 
   return (
     <div>
-      {missingCore && (
-        <div className="mx-auto max-w-[760px] px-5 pt-6">
-          <Callout tone="warn" title="PDF engines are not on this machine yet">
-            <p>
-              Merge needs qpdf; Analyze needs Poppler or PyMuPDF. Install missing tools now — the app searches
-              bundled resources, then the vendor folder, then PATH.
-            </p>
-            <InstallToolsButton onDone={checkBins} />
-          </Callout>
-        </div>
+      {showLine && (
+        <p className="px-5 pt-5 text-center text-sm text-ilp-muted">Downloading PDF tools…</p>
       )}
       <section className="mx-auto max-w-[760px] px-5 pb-4 pt-12 text-center sm:pt-16">
         <p>

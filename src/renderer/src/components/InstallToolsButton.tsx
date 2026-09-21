@@ -2,17 +2,21 @@ import { useState } from 'react'
 import { apiPost } from '../lib/api'
 
 export function installHint(tool = 'This tool'): string {
-  return `${tool} needs a local CLI that is missing. Use Install missing tools, or run scripts/install-pending.sh (macOS/Linux) / scripts/install-pending.ps1 (Windows). The app searches bundled resources, then ~/.local/share/ihate-pdf/bin (Linux), %LOCALAPPDATA%\\ihate-pdf\\bin (Windows), or ~/Library/Application Support/ihate-pdf/bin (macOS), then PATH.`
+  return `${tool} is not installed yet. Core PDF tools (qpdf + Poppler) download automatically on first launch.`
 }
 
 export function InstallToolsButton({
   onDone,
-  vendorOnly = false,
-  label
+  vendorOnly = true,
+  full = false,
+  label,
+  compact = false
 }: {
   onDone?: () => void
   vendorOnly?: boolean
+  full?: boolean
   label?: string
+  compact?: boolean
 }) {
   const [busy, setBusy] = useState(false)
   const [log, setLog] = useState<string | null>(null)
@@ -28,10 +32,9 @@ export function InstallToolsButton({
         message: string
         stdout?: string
         stderr?: string
-      }>('/api/install-tools', { vendorOnly })
+      }>('/api/install-tools', full ? { full: true } : { vendorOnly })
       setOk(data.ok)
-      const parts = [data.message, data.stdout, data.stderr].filter(Boolean)
-      setLog(parts.join('\n').trim())
+      setLog(data.message || (data.ok ? 'Tools ready.' : 'Could not finish.'))
       onDone?.()
     } catch (e) {
       setOk(false)
@@ -42,23 +45,15 @@ export function InstallToolsButton({
   }
 
   return (
-    <div className="mt-3 text-left">
+    <div className={compact ? 'inline-flex items-center gap-2' : 'mt-3 text-left'}>
       <button className="ilp-btn h-10 px-4 text-sm" disabled={busy} onClick={() => void run()}>
-        {busy ? 'Installing…' : label || 'Install missing tools'}
+        {busy ? 'Downloading…' : label || 'Download qpdf + Poppler'}
       </button>
-      {busy && (
-        <p className="mt-2 text-xs text-ilp-muted">
-          Downloading vendor binaries and installing only what is missing. This can take a few minutes.
-        </p>
+      {busy && !compact && (
+        <p className="mt-2 text-xs text-ilp-muted">Downloading PDF tools…</p>
       )}
-      {log && (
-        <pre
-          className={`mt-3 max-h-48 overflow-auto rounded-xl p-3 font-mono text-[11px] leading-relaxed ${
-            ok === false ? 'bg-[#fff3f2] text-[#5c1a16]' : 'bg-[#f6f6f8] text-[#333]'
-          }`}
-        >
-          {log}
-        </pre>
+      {log && !compact && (
+        <p className={`mt-2 text-xs ${ok === false ? 'text-[#5c1a16]' : 'text-[#5c5c66]'}`}>{log}</p>
       )}
     </div>
   )

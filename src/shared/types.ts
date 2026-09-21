@@ -133,6 +133,7 @@ export interface EngineStatus {
   diskFreeBytes: number
   extract?: Record<string, boolean | string>
   vendor?: { bin: string; platform: string }
+  vendorInstall?: { inFlight: boolean }
   llm?: {
     defaultProvider: string | null
     configured: string[]

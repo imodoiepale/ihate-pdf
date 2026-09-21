@@ -33,100 +33,33 @@ The npm package slug is `ihate-pdf`. The name on screen is three lowercase words
 
 ---
 
-## Install (one-click)
+## Install
 
-Installers are built by [GitHub Actions](https://github.com/imodoiepale/ihate-pdf/actions/workflows/release.yml) (`windows-latest`, `macos-latest`, `ubuntu-latest`) and attached to [GitHub Releases](https://github.com/imodoiepale/ihate-pdf/releases) on tags `v*`. **Electron** and **Tauri** shells share this React UI and the local engine. qpdf (Apache-2.0) may be bundled or downloaded into a user vendor folder; Poppler is GPL and is downloaded on first run / by `install-pending` rather than shipped inside extraResources. **v1.2.0** is the first packaged build with vendor PATH, `install-pending`, and Settings → **Install missing tools** (v1.1.0 was cut before that commit).
+[Download](https://github.com/imodoiepale/ihate-pdf/releases/tag/v1.2.0) `ihate-pdf-1.2.0-win-x64-setup.exe`, double-click, done. First launch fetches qpdf + Poppler into `%LOCALAPPDATA%\ihate-pdf\bin` in the background.
 
-### Electron — [v1.2.0](https://github.com/imodoiepale/ihate-pdf/releases/tag/v1.2.0)
+macOS: open the [DMG](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-mac-universal.dmg) (unsigned — right-click → Open). Linux: `chmod +x` the [AppImage](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-linux-x86_64.AppImage).
 
-| OS | File | Direct download |
-| --- | --- | --- |
-| **Windows x64 NSIS** | `ihate-pdf-1.2.0-win-x64-setup.exe` | [ihate-pdf-1.2.0-win-x64-setup.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-win-x64-setup.exe) |
-| **Windows x64 portable** | `ihate-pdf-1.2.0-win-x64-portable.exe` | [ihate-pdf-1.2.0-win-x64-portable.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-win-x64-portable.exe) |
-| **macOS universal DMG** | `ihate-pdf-1.2.0-mac-universal.dmg` | [ihate-pdf-1.2.0-mac-universal.dmg](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-mac-universal.dmg) |
-| **Linux AppImage** | `ihate-pdf-1.2.0-linux-x86_64.AppImage` | [ihate-pdf-1.2.0-linux-x86_64.AppImage](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-linux-x86_64.AppImage) |
-| **Debian / Ubuntu** | `ihate-pdf-1.2.0-linux-amd64.deb` | [ihate-pdf-1.2.0-linux-amd64.deb](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-linux-amd64.deb) |
-| **Fedora / RHEL** | `ihate-pdf-1.2.0-linux-x86_64.rpm` | [ihate-pdf-1.2.0-linux-x86_64.rpm](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-linux-x86_64.rpm) |
+| OS | File |
+| --- | --- |
+| Windows x64 | [setup.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-win-x64-setup.exe) · [portable](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-win-x64-portable.exe) |
+| macOS | [universal DMG](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-mac-universal.dmg) |
+| Linux | [AppImage](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-linux-x86_64.AppImage) · [deb](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-linux-amd64.deb) · [rpm](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-linux-x86_64.rpm) |
+| Tauri | [Windows](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-win-x64-setup.exe) · [macOS](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-mac-arm64.dmg) · [Linux](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-linux-x86_64.AppImage) |
 
-Windows NSIS is one-click (per-user, no option maze). macOS DMG is **unsigned** (right-click → Open). Linux AppImage: `chmod +x` then run. Debian `apt install ./ihate-pdf-*.deb` also pulls `qpdf` + `poppler-utils`. AppImage / NSIS / portable / Tauri do not require a manual `apt` for merge/analyze once vendor bins are installed (Settings → **Install missing tools**, or the pending script below).
+NSIS is one-click (per-user). LibreOffice, Tesseract, and Ghostscript stay optional (`./scripts/install-pending.sh --full`).
 
-### If a tool is missing
-
-Jobs fail with an install hint when `qpdf`, `pdftotext`, or another CLI is not on the engine PATH. The engine searches, in order:
-
-1. Bundled `resources/bin/{linux-x64,win-x64,mac-arm64,mac-x64}/` (packaged extraResources / Tauri sidecars)
-2. User vendor dir — `~/.local/share/ihate-pdf/bin` (Linux), `%LOCALAPPDATA%\ihate-pdf\bin` (Windows), `~/Library/Application Support/ihate-pdf/bin` (macOS)
-3. System `PATH`
-
-PATH is prepended when the process starts and **re-scanned before every job**, so you do not need to restart the terminal for the app to see a vendor install.
-
-Install only what is missing (idempotent, non-interactive):
-
-```bash
-./scripts/install-pending.sh      # Linux / macOS (apt / dnf / pacman / brew + vendor qpdf/poppler)
-```
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/install-pending.ps1
-# Official qpdf Windows zip (Apache-2.0) + Poppler → %LOCALAPPDATA%\ihate-pdf\bin
-```
-
-`scripts/install-deps.sh` and `scripts/install-deps.ps1` call the same pending installer. In the app: **Settings → Workspace → Install missing tools** (also offered on first-run and on job errors).
-
-Debian `.deb` already `Depends:` on `qpdf`, `poppler-utils`, and `python3`. Ghostscript, LibreOffice, and Tesseract stay optional.
-
-### PDF engines
-
-| Need | Tool | How |
-| --- | --- | --- |
-| Merge / split / organize / rotate / protect | **qpdf** | Required (Apache-2.0 vendor zip or package) |
-| Analyze, PDF→JPG, extract images | **Poppler** (`pdftotext`, `pdftoppm`, `pdfimages`) | Required for those tools (GPL — user vendor download) |
-| Lossy compress, PDF/A, repair rewrite | Ghostscript | Optional |
-| Office ↔ PDF | LibreOffice | Optional |
-| OCR | Tesseract | Optional |
-| Fast Analyze / bank extract | Python 3 + `pip install -r resources/requirements-extract.txt` | Optional (PyMuPDF) |
-
-### Tauri — [v1.2.0](https://github.com/imodoiepale/ihate-pdf/releases/tag/v1.2.0)
-
-Same product, lighter webview. The Tauri app **spawns the Node engine** plus the Python/qpdf pipeline; it does not replace Electron.
-
-| OS | File | Direct download |
-| --- | --- | --- |
-| **Windows x64 NSIS** | `ihate-pdf-1.2.0-tauri-win-x64-setup.exe` | [ihate-pdf-1.2.0-tauri-win-x64-setup.exe](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-win-x64-setup.exe) |
-| **macOS Apple silicon DMG** | `ihate-pdf-1.2.0-tauri-mac-arm64.dmg` | [ihate-pdf-1.2.0-tauri-mac-arm64.dmg](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-mac-arm64.dmg) |
-| **Linux AppImage** | `ihate-pdf-1.2.0-tauri-linux-x86_64.AppImage` | [ihate-pdf-1.2.0-tauri-linux-x86_64.AppImage](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-linux-x86_64.AppImage) |
-| **Debian / Ubuntu** | `ihate-pdf-1.2.0-tauri-linux-amd64.deb` | [ihate-pdf-1.2.0-tauri-linux-amd64.deb](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-linux-amd64.deb) |
-| **Fedora / RHEL** | `ihate-pdf-1.2.0-tauri-linux-x86_64.rpm` | [ihate-pdf-1.2.0-tauri-linux-x86_64.rpm](https://github.com/imodoiepale/ihate-pdf/releases/download/v1.2.0/ihate-pdf-1.2.0-tauri-linux-x86_64.rpm) |
-
-```bash
-npm run tauri:dev    # Vite on http://127.0.0.1:43127 + engine on :43128
-npm run tauri:build  # native installer for this OS
-```
-
-### One-click from a clone
-
-```bash
-# Linux / macOS — download the latest Release asset for this OS
-./scripts/install.sh
-
-# Windows (PowerShell) — download NSIS setup.exe and run it
-powershell -ExecutionPolicy Bypass -File scripts/install.ps1
-```
-
-### Build installers from source
+### Build from source
 
 ```bash
 npm install
-npm run dist          # this OS
-npm run dist:win      # NSIS + portable .exe (x64) — run on Windows or CI
-npm run dist:mac      # universal DMG — run on macOS or CI
-npm run dist:linux    # AppImage + .deb + .rpm
-npm run tauri:build   # Tauri nsis / dmg / AppImage / deb / rpm (this OS)
+npm run dist          # this OS  (dist:win / dist:mac / dist:linux on CI)
+npm run tauri:build   # lighter native shell
 ```
 
-Windows `.exe` artifacts come from GitHub Actions, not from a Linux checkout. A Linux VM cannot emit a real Windows Tauri `.exe`; the `tauri` job on `windows-latest` does.
+Windows `.exe` artifacts come from GitHub Actions (`windows-latest`), not from a Linux checkout.
 
 ### macOS notarization
+
 
 CI sets `CSC_IDENTITY_AUTO_DISCOVERY=false` and `mac.identity: null`, so the DMG is **unsigned**. To notarize, add a Developer ID certificate to the repo (`CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`) and turn `notarize` on in `electron-builder.yml`.
 
@@ -227,7 +160,7 @@ Jobs are queued so a folder of hundreds of PDFs does not fork hundreds of proces
 **Security** — Protect, Unlock, Sign (image stamp), Redact, Compare  
 **Analyze & AI** — Analyze PDF, Bank extract, M-PESA extract, Invoice extract, Extract anything, Ask PDF, Summarize, Translate
 
-Missing binaries fail with an install hint and an **Install missing tools** button instead of a silent stub.
+Missing binaries show a short status line while qpdf/Poppler download; optional CLIs (LibreOffice, Tesseract) stay optional.
 
 ---
 
@@ -244,7 +177,7 @@ Missing binaries fail with an install hint and an **Install missing tools** butt
 
 ## Run from source
 
-System tools (once):
+PDF tools (vendor-only qpdf + Poppler; pass `--full` for LibreOffice/tesseract):
 
 ```bash
 ./scripts/install-pending.sh

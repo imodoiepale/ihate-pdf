@@ -8,8 +8,7 @@
   FileWrite $0 "  2) %LOCALAPPDATA%\ihate-pdf\bin$\r$\n"
   FileWrite $0 "  3) PATH$\r$\n"
   FileWrite $0 "$\r$\n"
-  FileWrite $0 "If a tool is missing, run scripts\install-pending.ps1$\r$\n"
-  FileWrite $0 "(or Settings → Install missing tools).$\r$\n"
+  FileWrite $0 "First launch downloads qpdf + Poppler into LocalAppData.$\r$\n"
   FileWrite $0 "https://github.com/imodoiepale/ihate-pdf$\r$\n"
   FileClose $0
 !macroend

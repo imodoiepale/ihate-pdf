@@ -1,6 +1,6 @@
 {
   "name": "ihate-pdf",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "i hate pdf — local-first desktop PDF studio that drops iLovePDF-style upload caps, quotas, and accounts. Merge, split, compress, convert, and batch huge files on disk. Bring your own LLM keys.",
   "main": "./out/main/index.js",
   "author": "James Epale <ijepale@gmail.com>",

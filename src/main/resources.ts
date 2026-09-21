@@ -178,4 +178,4 @@ export function extraResourceLibDirs(): string[] {
 }
 
 export const INSTALL_PENDING_HINT =
-  'Run scripts/install-pending.sh (macOS/Linux) or scripts/install-pending.ps1 (Windows), or use Settings → Install missing tools. The app searches bundled resources, then the vendor folder (~/.local/share/ihate-pdf/bin, %LOCALAPPDATA%\\ihate-pdf\\bin, or ~/Library/Application Support/ihate-pdf/bin), then PATH.'
+  'The app downloads qpdf and Poppler into the vendor folder on first launch (~/.local/share/ihate-pdf/bin, %LOCALAPPDATA%\\ihate-pdf\\bin, or ~/Library/Application Support/ihate-pdf/bin).'

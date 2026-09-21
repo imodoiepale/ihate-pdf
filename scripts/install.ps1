@@ -4,7 +4,7 @@
 param(
   [string]$Repo = $(if ($env:IHATEPDF_REPO) { $env:IHATEPDF_REPO } else { "imodoiepale/ihate-pdf" }),
   [switch]$Portable,
-  [switch]$SkipDeps
+  [switch]$InstallTools
 )
 
 $ErrorActionPreference = "Stop"
@@ -50,13 +50,12 @@ if ($Portable) {
   }
 }
 
-if (-not $SkipDeps) {
+if ($InstallTools) {
   $deps = Join-Path $PSScriptRoot "install-pending.ps1"
-  if (-not (Test-Path $deps)) { $deps = Join-Path $PSScriptRoot "install-deps.ps1" }
   if (Test-Path $deps) {
-    Write-Host "Installing missing PDF tools (qpdf / Poppler) into %LOCALAPPDATA%\ihate-pdf\bin…"
+    Write-Host "Downloading qpdf / Poppler into %LOCALAPPDATA%\ihate-pdf\bin…"
     & $deps
-  } else {
-    Write-Host "Run scripts/install-pending.ps1 if merge/analyze tools are missing."
   }
+} else {
+  Write-Host "Done. First launch downloads qpdf + Poppler in the background."
 }

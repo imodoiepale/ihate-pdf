@@ -21,7 +21,7 @@ import {
 import { testProvider } from './llm'
 import { handleMcpJsonRpc, isSafeIndexDir, MCP_TOOLS } from './mcp'
 import { ensureDir, extraPath, formatBytes, refreshToolPath } from './run'
-import { maybeEnsureVendorInBackground, runInstallPending } from './install-tools'
+import { maybeEnsureVendorInBackground, runInstallPending, vendorInstallInFlight } from './install-tools'
 import { userVendorBinDir, vendorPlatformKey } from './resources'
 
 const bus = new EventEmitter()
@@ -122,13 +122,13 @@ export async function startApiServer(port = API_PORT): Promise<void> {
   if (prefs.outputDir) outputDir = prefs.outputDir
   if (prefs.concurrency) concurrency = prefs.concurrency
   await ensureDir(outputDir)
+  maybeEnsureVendorInBackground()
   const server = createServer((req, res) => {
     void handle(req, res)
   })
   return new Promise((resolve, reject) => {
     server.listen(port, '127.0.0.1', () => {
       console.log(`i hate pdf engine listening on http://127.0.0.1:${port}`)
-      maybeEnsureVendorInBackground()
       resolve()
     })
     server.on('error', reject)
@@ -167,6 +167,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
           bin: userVendorBinDir(),
           platform: vendorPlatformKey()
         },
+        vendorInstall: { inFlight: vendorInstallInFlight() },
         llm: {
           defaultProvider: prefs.defaultProvider,
           configured: Object.values(prefs.providers)
@@ -183,8 +184,8 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       return
     }
     if (req.method === 'POST' && url.pathname === '/api/install-tools') {
-      const body = await json<{ vendorOnly?: boolean }>(req)
-      const result = await runInstallPending({ vendorOnly: Boolean(body.vendorOnly) })
+      const body = await json<{ vendorOnly?: boolean; full?: boolean }>(req)
+      const result = await runInstallPending({ vendorOnly: body.vendorOnly, full: body.full })
       send(res, result.ok ? 200 : 207, result)
       return
     }

@@ -90,4 +90,4 @@ if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
   echo "Add $BIN_DIR to PATH if the command is not found."
 fi
 echo
-echo "If a PDF tool is missing, run: $(cd "$(dirname "$0")" && pwd)/install-pending.sh"
+echo "Done. First launch downloads qpdf + Poppler in the background."

@@ -1,15 +1,15 @@
-# i hate pdf — install only missing PDF engine tools (idempotent, non-interactive).
-# Detects: qpdf, poppler (pdftotext/pdfinfo/pdftoppm/pdfimages), python3, pymupdf,
-# pdfplumber, pypdf, ghostscript, img2pdf, tesseract, libreoffice, zip.
-#
-# Official qpdf (Apache-2.0) and Poppler Windows builds download into
-# %LOCALAPPDATA%\ihate-pdf\bin — the app prepends this to PATH (no terminal restart).
+# i hate pdf — install missing PDF engine tools (idempotent, non-interactive).
+# Default is vendor-only: official qpdf zip + Poppler into %LOCALAPPDATA%\ihate-pdf\bin.
+# Pass -Full for winget/choco LibreOffice, Tesseract, Ghostscript, and Python extras.
 [CmdletBinding()]
 param(
   [string]$Prefix = $(if ($env:IHATEPDF_VENDOR_ROOT) { $env:IHATEPDF_VENDOR_ROOT } else { Join-Path $env:LOCALAPPDATA "ihate-pdf" }),
   [switch]$VendorOnly,
+  [switch]$Full,
   [switch]$DryRun
 )
+# Default vendor-only unless -Full. -VendorOnly stays as an explicit alias.
+$VendorOnly = -not $Full
 
 $ErrorActionPreference = "Continue"
 $bin = if ($env:IHATEPDF_VENDOR_BIN) { $env:IHATEPDF_VENDOR_BIN } else { Join-Path $Prefix "bin" }
@@ -169,8 +169,8 @@ if ($needPoppler) {
 }
 
 if (Resolve-Cmd @("python", "python3", "py")) { $skipped.Add("python3"); Write-Host "  skipped:   python3" }
-elseif ($VendorOnly) { $failed.Add("python3") }
-else { $failed.Add("python3") }
+elseif ($VendorOnly) { $skipped.Add("python3 (optional, vendor-only)") }
+else { $failed.Add("python3"); Write-Host "  failed:    python3" }
 
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
 if ($userPath -notlike "*$bin*") {
@@ -182,7 +182,9 @@ $env:Path = "$bin;$env:Path"
 $py = Resolve-Cmd @("python", "python3", "py")
 $req = Join-Path $PSScriptRoot "..\resources\requirements-extract.txt"
 if (-not (Test-Path $req)) { $req = Join-Path $PSScriptRoot "..\requirements-extract.txt" }
-if ($py) {
+if ($VendorOnly) {
+  $skipped.Add("python extras (optional, vendor-only)")
+} elseif ($py) {
   $needPy = -not ((Test-PyMod "fitz") -and (Test-PyMod "pdfplumber") -and (Test-PyMod "pypdf"))
   $needImg = -not ((Resolve-Cmd @("img2pdf")) -or (Test-PyMod "img2pdf"))
   if ($needPy -or $needImg) {

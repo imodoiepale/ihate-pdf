@@ -97,12 +97,12 @@ async function runScript(vendorOnly: boolean): Promise<InstallToolsResult> {
             'Bypass',
             '-File',
             script,
-            ...(vendorOnly ? ['-VendorOnly'] : [])
+            ...(vendorOnly ? ['-VendorOnly'] : ['-Full'])
           ],
           env,
           timeoutMs
         )
-      : await spawnCapture('bash', [script, ...(vendorOnly ? ['--vendor-only'] : [])], env, timeoutMs)
+      : await spawnCapture('bash', [script, ...(vendorOnly ? ['--vendor-only'] : ['--full'])], env, timeoutMs)
     stdout = ran.stdout
     stderr = ran.stderr
     code = ran.code
@@ -126,16 +126,35 @@ async function runScript(vendorOnly: boolean): Promise<InstallToolsResult> {
   const ok = Boolean(binaries.qpdf) && code === 0
   const message = ok
     ? `Tools ready. qpdf=${binaries.qpdf || 'missing'} pdftotext=${binaries.pdftotext || 'missing'}`
-    : `Install finished with missing tools. qpdf=${binaries.qpdf || 'MISSING'} pdftotext=${binaries.pdftotext || 'MISSING'}. See scripts/install-pending.sh`
+    : `PDF tools missing. qpdf=${binaries.qpdf || 'MISSING'} pdftotext=${binaries.pdftotext || 'MISSING'}`
   return { ok, code, stdout, stderr, script, vendorOnly, binaries, message }
 }
 
-export function runInstallPending(opts: { vendorOnly?: boolean } = {}): Promise<InstallToolsResult> {
+function resolveVendorOnly(opts: { vendorOnly?: boolean; full?: boolean }): boolean {
+  if (opts.full === true) return false
+  return opts.vendorOnly !== false
+}
+
+export function runInstallPending(opts: { vendorOnly?: boolean; full?: boolean } = {}): Promise<InstallToolsResult> {
   if (inflight) return inflight
-  inflight = runScript(Boolean(opts.vendorOnly)).finally(() => {
+  inflight = runScript(resolveVendorOnly(opts)).finally(() => {
     inflight = null
   })
   return inflight
+}
+
+export function vendorInstallInFlight(): boolean {
+  return inflight !== null
+}
+
+/** Wait only when a core CLI is missing and a vendor download is already running. */
+export async function waitForCoreVendorIfNeeded(): Promise<boolean> {
+  refreshToolPath()
+  if (whichSync('qpdf') && whichSync('pdftotext')) return false
+  if (!inflight) return false
+  await inflight
+  refreshToolPath()
+  return true
 }
 
 export function maybeEnsureVendorInBackground(): void {

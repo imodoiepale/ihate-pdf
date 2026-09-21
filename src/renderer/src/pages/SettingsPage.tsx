@@ -361,8 +361,8 @@ function WorkspacePanel({
       <div className="surface p-5">
         <p className="text-[12px] font-semibold uppercase tracking-wide text-ilp-muted">Local PDF tools</p>
         <p className="mt-1 text-[13px] text-[#5c5c66]">
-          Merge and analyze need qpdf and Poppler. If a tool is missing, install only what is pending — the app
-          prepends the vendor folder to PATH so you do not need a terminal restart.
+          Merge and analyze need qpdf and Poppler. First launch downloads them into the vendor folder in the
+          background.
         </p>
         {vendor && <p className="mt-2 break-all font-mono text-[12px] text-ilp-muted">{vendor}</p>}
         {bins && (
@@ -380,10 +380,10 @@ function WorkspacePanel({
           <p className="mt-3 text-[13px] text-amber-800">Missing: {missing.join(', ')}</p>
         )}
         <InstallToolsButton onDone={() => void loadBins()} />
-        <p className="mt-3 text-[12px] text-ilp-muted">
-          CLI equivalent: <code className="font-mono">scripts/install-pending.sh</code> or{' '}
-          <code className="font-mono">scripts/install-pending.ps1</code>
-        </p>
+        <div className="mt-3">
+          <InstallToolsButton full label="Install optional tools" onDone={() => void loadBins()} compact />
+        </div>
+        <p className="mt-2 text-[12px] text-ilp-muted">LibreOffice, Tesseract, and Ghostscript stay optional.</p>
       </div>
     </div>
   )

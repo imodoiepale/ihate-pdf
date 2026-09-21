@@ -6,6 +6,7 @@ import { chunk, copyFileStream, ensureDir, parseOrder, parseRanges, resolvePytho
 import { pdfInfo } from './pdfinfo'
 import { defaultOutputDir, defaultTmp } from './paths'
 import { INSTALL_PENDING_HINT, resourceFile } from './resources'
+import { vendorInstallInFlight, waitForCoreVendorIfNeeded } from './install-tools'
 import { getElectron } from './optional-electron'
 import {
   runAskIndexJob,
@@ -460,6 +461,10 @@ export async function inspectFile(path: string, password?: string): Promise<Part
 
 export async function runJob(job: JobRequest, cb: Emit): Promise<JobResult> {
   refreshToolPath()
+  if (vendorInstallInFlight() && (!whichSync('qpdf') || !whichSync('pdftotext'))) {
+    emit(cb, job.id, 3, 'Downloading PDF tools…')
+    await waitForCoreVendorIfNeeded()
+  }
   const password = optStr(job.options, 'password') || undefined
   const destRoot = await outDirFor(job)
   emit(cb, job.id, 2, 'Preparing…')

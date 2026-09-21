@@ -6,7 +6,7 @@ import { apiGet, apiPost, importBrowserFile, subscribeJob } from '../lib/api'
 import { formatBytes, formatPages } from '../lib/format'
 import { ToolIcon } from '../components/ToolIcon'
 import { Callout, EmptyDrop, LoadingBar } from '../components/Callout'
-import { InstallToolsButton, installHint } from '../components/InstallToolsButton'
+import { InstallToolsButton } from '../components/InstallToolsButton'
 
 type Status = {
   outputDir: string
@@ -14,6 +14,7 @@ type Status = {
   binaries: Record<string, string | null>
   extract?: Record<string, boolean | string>
   vendor?: { bin: string; platform: string }
+  vendorInstall?: { inFlight: boolean }
   llm?: { defaultProvider: string | null; configured: string[]; encryption: string }
 }
 
@@ -68,6 +69,8 @@ export function ToolWorkspace() {
 
   useEffect(() => {
     refreshStatus()
+    const t = window.setInterval(refreshStatus, 2000)
+    return () => window.clearInterval(t)
   }, [refreshStatus])
 
   const addFiles = useCallback((incoming: FileRef[]) => {
@@ -139,19 +142,21 @@ export function ToolWorkspace() {
     })
   }
 
+  const vendorBusy = Boolean(status?.vendorInstall?.inFlight)
+
   const missingHint = useMemo(() => {
     if (!tool || !status) return null
     const bins = status.binaries
-    const need = (name: string, label: string) => (!bins[name] ? installHint(label) : null)
+    const need = (name: string, label: string) => (!bins[name] ? `${label} is not installed.` : null)
     if (['word-to-pdf', 'ppt-to-pdf', 'excel-to-pdf', 'pdf-to-word', 'pdf-to-ppt', 'pdf-to-excel', 'html-to-pdf'].includes(tool.id)) {
-      return need('soffice', 'LibreOffice (soffice)')
+      return need('soffice', 'LibreOffice (optional)')
     }
-    if (tool.id === 'ocr') return need('tesseract', 'Tesseract')
+    if (tool.id === 'ocr') return need('tesseract', 'Tesseract (optional)')
     if (tool.id === 'jpg-to-pdf' || tool.id === 'scan-to-pdf') {
-      return need('img2pdf', 'img2pdf')
+      return need('img2pdf', 'img2pdf (optional)')
     }
     if (tool.id === 'pdf-to-jpg') return need('pdftoppm', 'Poppler (pdftoppm)')
-    if (tool.id === 'pdf-to-pdfa') return need('gs', 'Ghostscript')
+    if (tool.id === 'pdf-to-pdfa') return need('gs', 'Ghostscript (optional)')
     if (
       ['parse-pdf', 'extract-bank', 'extract-mpesa', 'extract-invoice', 'extract-anything', 'ask-pdf', 'summarize-pdf', 'translate-pdf'].includes(
         tool.id
@@ -165,6 +170,8 @@ export function ToolWorkspace() {
     }
     return need('qpdf', 'qpdf')
   }, [tool, status])
+
+  const coreWait = vendorBusy && missingHint && /qpdf|Poppler/i.test(missingHint)
 
   const ready = useMemo(() => {
     if (!tool) return false
@@ -244,16 +251,12 @@ export function ToolWorkspace() {
         </div>
       )}
 
-      {missingHint && (
-        <div className="mx-auto mt-4 max-w-[760px] px-5">
-          <Callout tone="warn" title="A required tool is missing">
-            <p>{missingHint}</p>
-            {status?.vendor?.bin && (
-              <p className="mt-2 text-[12px] text-ilp-muted">Vendor folder: {status.vendor.bin}</p>
-            )}
-            <InstallToolsButton onDone={refreshStatus} />
-          </Callout>
-        </div>
+      {coreWait && (
+        <p className="mx-auto mt-4 max-w-[760px] px-5 text-center text-sm text-ilp-muted">Downloading PDF tools…</p>
+      )}
+
+      {missingHint && !coreWait && (
+        <p className="mx-auto mt-4 max-w-[760px] px-5 text-center text-sm text-ilp-muted">{missingHint}</p>
       )}
 
       {files.some((f) => f.size >= 1024 * 1024 * 1024) && (
@@ -398,8 +401,11 @@ export function ToolWorkspace() {
           <div className="mt-6">
             <Callout tone="danger" title="Couldn’t finish this job">
               <p>{error}</p>
-              {/not installed|MISSING|install-pending|poppler|qpdf is not/i.test(error) && (
-                <InstallToolsButton onDone={refreshStatus} />
+              {/not installed|MISSING|install-pending|poppler|qpdf is not/i.test(error) && vendorBusy && (
+                <p className="mt-2 text-sm text-ilp-muted">Downloading PDF tools…</p>
+              )}
+              {/not installed|MISSING|install-pending|poppler|qpdf is not/i.test(error) && !vendorBusy && (
+                <InstallToolsButton compact onDone={refreshStatus} />
               )}
             </Callout>
           </div>

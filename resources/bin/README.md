@@ -14,7 +14,7 @@ resources/bin/
 
 qpdf official zips use `bin/` + `lib/` with `RUNPATH=$ORIGIN/../lib`. Keep that layout so the binary runs without extra env.
 
-**Poppler** (`pdftotext`, `pdfinfo`, `pdftoppm`, `pdfimages`) is GPL. This MIT app does not ship those binaries in extraResources. `scripts/install-pending.sh` / `.ps1` download them on first run into the user vendor dir:
+**Poppler** (`pdftotext`, `pdfinfo`, `pdftoppm`, `pdfimages`) is GPL. This MIT app does not ship those binaries in extraResources. First launch (and `scripts/install-pending.sh`, vendor-only by default) downloads them into the user vendor dir:
 
 - Linux: `~/.local/share/ihate-pdf/bin`
 - Windows: `%LOCALAPPDATA%\ihate-pdf\bin`
